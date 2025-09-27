@@ -27,11 +27,11 @@ export default function SignupPage() {
       return;
     }
 
-    // 👇 Insert into profiles table
+    // 👇 Insert into profiles table (returning minimal = don’t try to fetch the row back)
     if (data.user) {
-      const { error: insertError } = await supabase.from("profiles").insert([
-        { id: data.user.id, role },
-      ]);
+      const { error: insertError } = await supabase
+        .from("profiles")
+        .insert([{ id: data.user.id, role }]);
 
       if (insertError) {
         console.error("Profile insert error:", insertError.message);
