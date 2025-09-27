@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 export default function ContentGeneratorPage() {
   const [prompt, setPrompt] = useState("");
@@ -12,11 +13,14 @@ export default function ContentGeneratorPage() {
     setResult("");
 
     try {
-      const res = await fetch("http://localhost:8000/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        }
+      );
 
       const data = await res.json();
       setResult(data.content);
@@ -51,8 +55,18 @@ export default function ContentGeneratorPage() {
       </button>
 
       {result && (
-        <div className="mt-6 p-4 border rounded-lg bg-gray-50 whitespace-pre-line">
-          {result}
+        <div className="mt-6 prose prose-indigo max-w-none">
+          <ReactMarkdown>{result}</ReactMarkdown>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2 mt-6">
+            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+              Open in Collaborative Editor
+            </button>
+            <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+              Save Draft
+            </button>
+          </div>
         </div>
       )}
     </div>

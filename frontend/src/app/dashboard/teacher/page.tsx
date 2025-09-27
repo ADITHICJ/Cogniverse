@@ -1,4 +1,7 @@
-import React from 'react';
+"use client";
+
+import React from "react";
+import Link from "next/link";
 
 // TopBar Component (inline for artifact compatibility)
 function TopBar() {
@@ -8,32 +11,69 @@ function TopBar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
-            <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <path d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z" fill="currentColor"></path>
+            <svg
+              className="h-8 w-8 text-blue-600"
+              fill="none"
+              viewBox="0 0 48 48"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z"
+                fill="currentColor"
+              ></path>
             </svg>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">PrepSmart</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              PrepSmart
+            </h1>
           </div>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <a className="text-blue-600 font-semibold" href="#">Dashboard</a>
-            <a className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors" href="#">AI Content</a>
-            <a className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors" href="#">Template Library</a>
-            <a className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors" href="#">My Drafts</a>
+            <a className="text-blue-600 font-semibold" href="#">
+              Dashboard
+            </a>
+            <a
+              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors"
+              href="#"
+            >
+              AI Content
+            </a>
+            <a
+              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors"
+              href="#"
+            >
+              Template Library
+            </a>
+            <a
+              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors"
+              href="#"
+            >
+              My Drafts
+            </a>
           </nav>
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
             <button className="p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-              <svg className="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM9 7H4l5-5v5zM12 2v20" />
+              <svg
+                className="h-5 w-5 text-gray-600 dark:text-gray-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 17h5l-5 5v-5zM9 7H4l5-5v5zM12 2v20"
+                />
               </svg>
             </button>
             <div className="relative">
               <button className="flex items-center space-x-2">
-                <img 
-                  alt="User profile picture" 
-                  className="h-8 w-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" 
+                <img
+                  alt="User profile picture"
+                  className="h-8 w-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
                   src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                 />
               </button>
@@ -54,45 +94,76 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Dashboard</h2>
-          
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+            Dashboard
+          </h2>
+
           {/* Quick Actions */}
           <section>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Quick Actions
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <a className="group bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center" href="#">
+              {/* ✅ Generate New Content links to /content-generator */}
+              <Link
+                href="/dashboard/teacher/content"
+                className="group bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center"
+              >
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-full mb-4">
-                  <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                  <svg
+                    className="h-8 w-8 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+                    />
                   </svg>
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Generate New Content</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Create AI-powered content in seconds.</p>
-              </a>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Generate New Content
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Create AI-powered content in seconds.
+                </p>
+              </Link>
 
+              {/* View Templates */}
               <a className="group bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center" href="#">
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-full mb-4">
                   <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">View Templates</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Browse our library of pre-built templates.</p>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  View Templates
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Browse our library of pre-built templates.
+                </p>
               </a>
 
+              {/* My Drafts */}
               <a className="group bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center" href="#">
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-full mb-4">
                   <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">My Drafts</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Access and manage your saved drafts.</p>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  My Drafts
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Access and manage your saved drafts.
+                </p>
               </a>
             </div>
           </section>
 
-          {/* Recent Activity */}
           <section className="mt-12">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -152,3 +223,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+          

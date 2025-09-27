@@ -4,5 +4,10 @@
   "less.lint.unknownAtRules": "ignore",
   "css.customData": [
     ".vscode/css_custom_data.json"
+  ],
+  "python-envs.pythonProjects": [],
+  "python.defaultInterpreterPath": "E:\\Hacker-ring\\PrepSmart\\backend\\.venv\\Scripts\\python.exe",
+  "python.analysis.extraPaths": [
+    "E:\\Hacker-ring\\PrepSmart\\backend\\.venv\\Lib\\site-packages"
   ]
 }
