@@ -14,11 +14,11 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { role }, // 👈 still store in raw_user_meta_data
+        data: { role }, // 👈 stored in raw_user_meta_data → trigger reads this
       },
     });
 
@@ -27,20 +27,8 @@ export default function SignupPage() {
       return;
     }
 
-    // 👇 Insert into profiles table (returning minimal = don’t try to fetch the row back)
-    if (data.user) {
-      const { error: insertError } = await supabase
-        .from("profiles")
-        .insert([{ id: data.user.id, role }]);
-
-      if (insertError) {
-        console.error("Profile insert error:", insertError.message);
-        setError("Signup succeeded but profile insert failed");
-        return;
-      }
-    }
-
-    router.push("/dashboard"); // Go to dashboard if everything is fine
+    // 🚀 no manual insert here, trigger handles profile creation
+    router.push("/dashboard");
   };
 
   return (
@@ -53,6 +41,7 @@ export default function SignupPage() {
           Signup
         </h2>
         {error && <p className="text-red-500 mb-3">{error}</p>}
+
         <input
           type="email"
           placeholder="Email"
@@ -60,6 +49,7 @@ export default function SignupPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+
         <input
           type="password"
           placeholder="Password"
