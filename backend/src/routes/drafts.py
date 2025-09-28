@@ -12,10 +12,14 @@ supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_
 async def get_draft_versions(draft_id: str):
     """Get all versions of a draft for history sidebar"""
     try:
+        print(f"🔍 Fetching versions for draft: {draft_id}")
         response = supabase.table("draft_versions").select("*").eq("draft_id", draft_id).order("created_at", desc=True).execute()
+        print(f"✅ Found {len(response.data)} versions")
         return JSONResponse(content=response.data)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ Error in get_draft_versions: {str(e)}")
+        print(f"❌ Exception type: {type(e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @router.post("/drafts/{draft_id}/save_version")
 async def save_version(draft_id: str, body: dict):
@@ -41,35 +45,17 @@ async def save_version(draft_id: str, body: dict):
 async def restore_version(draft_id: str, version_id: str):
     try:
         # Get the version to restore
-        version_response = supabase.table("draft_versions").select("content", "created_at", "version_number").eq("id", version_id).eq("draft_id", draft_id).single().execute()
+        version_to_restore = supabase.table("draft_versions").select("content", "created_at").eq("id", version_id).single().execute()
 
-        if not version_response.data:
+        if not version_to_restore.data:
             raise HTTPException(status_code=404, detail="Version not found")
 
-        version_to_restore = version_response.data
-
-        # Get all versions newer than the one being restored
-        newer_versions = supabase.table("draft_versions").select("id").eq("draft_id", draft_id).gt("created_at", version_to_restore["created_at"]).execute()
-        
-        deleted_count = len(newer_versions.data) if newer_versions.data else 0
+        # Update the main draft's content
+        supabase.table("drafts").update({"content": version_to_restore.data["content"]}).eq("id", draft_id).execute()
 
         # Delete all versions newer than the one being restored
-        if deleted_count > 0:
-            supabase.table("draft_versions").delete().eq("draft_id", draft_id).gt("created_at", version_to_restore["created_at"]).execute()
+        supabase.table("draft_versions").delete().eq("draft_id", draft_id).gt("created_at", version_to_restore.data["created_at"]).execute()
 
-        # Update the main draft's content
-        supabase.table("drafts").update({
-            "content": version_to_restore["content"],
-            "updated_at": "now()"
-        }).eq("id", draft_id).execute()
-
-        return {
-            "success": True, 
-            "restored_version": version_to_restore["version_number"],
-            "deleted_versions": deleted_count,
-            "message": f"Restored to version {version_to_restore['version_number']}, deleted {deleted_count} newer versions"
-        }
-    except HTTPException:
-        raise
+        return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to restore version: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

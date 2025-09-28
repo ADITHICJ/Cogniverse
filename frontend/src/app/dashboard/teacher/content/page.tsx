@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabaseClient";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,33 @@ export default function ContentGeneratorPage() {
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const router = useRouter();
+
+  // ✅ Fetch templates for logged-in teacher
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("templates")
+        .select("id, title, content")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Error fetching templates:", error);
+      } else {
+        setTemplates(data || []);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -18,10 +44,16 @@ export default function ContentGeneratorPage() {
     try {
       const backendUrl =
         process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
       const res = await fetch(`${backendUrl}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          prompt,
+          additional_ctx: selectedTemplate
+            ? templates.find((t) => t.id === selectedTemplate)?.content
+            : "",
+        }),
       });
 
       if (!res.ok) {
@@ -118,6 +150,27 @@ export default function ContentGeneratorPage() {
       <h1 className="text-3xl font-bold text-indigo-600 mb-6">
         AI Content Generator ✨
       </h1>
+
+      {/* Template Dropdown */}
+      {templates.length > 0 && (
+        <div className="mb-4">
+          <label className="block text-gray-700 font-medium mb-2">
+            Apply Template (optional)
+          </label>
+          <select
+            value={selectedTemplate}
+            onChange={(e) => setSelectedTemplate(e.target.value)}
+            className="w-full border rounded-lg p-3"
+          >
+            <option value="">-- No Template --</option>
+            {templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <textarea
         className="w-full border rounded-lg p-3 mb-4"

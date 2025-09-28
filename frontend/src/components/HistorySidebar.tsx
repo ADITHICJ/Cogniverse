@@ -14,7 +14,7 @@ export default function HistorySidebar({ draftId }: { draftId: string }) {
 
   const fetchVersions = async () => {
     try {
-      const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/drafts/${draftId}/versions`;
+      const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/drafts/${draftId}/draft_versions`;
       console.log("🔄 Fetching versions from:", url);
       
       const res = await fetch(url);
@@ -59,6 +59,8 @@ export default function HistorySidebar({ draftId }: { draftId: string }) {
   };
 
   const confirmRestore = async (versionId: string) => {
+    if (!confirm("Are you sure you want to restore this version? This will delete all newer versions.")) return;
+
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/drafts/${draftId}/versions/${versionId}/restore`,
@@ -72,22 +74,13 @@ export default function HistorySidebar({ draftId }: { draftId: string }) {
       }
 
       // Refetch versions and notify the editor to reload content
-      await fetchVersions();
+      fetchVersions();
       window.dispatchEvent(new Event("content-restored"));
       setSelectedVersion(null);
       setIsRestoring(false);
-      
-      // Show success message
-      const event = new CustomEvent("show-notification", {
-        detail: { message: "Version restored successfully!", type: "success" }
-      });
-      window.dispatchEvent(event);
     } catch (err) {
       console.error("Restore error:", err);
-      const event = new CustomEvent("show-notification", {
-        detail: { message: "Failed to restore version", type: "error" }
-      });
-      window.dispatchEvent(event);
+      alert("Failed to restore version.");
     }
   };
 
