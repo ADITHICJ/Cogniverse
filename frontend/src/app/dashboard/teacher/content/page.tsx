@@ -16,27 +16,34 @@ export default function ContentGeneratorPage() {
 
   // ✅ Fetch templates for logged-in teacher
   useEffect(() => {
-    const fetchTemplates = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  const fetchTemplates = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
-      if (!user) return;
+    const { data, error } = await supabase
+      .from("templates")
+      .select("id, title, content")
+      .eq("user_id", user.id);
 
-      const { data, error } = await supabase
-        .from("templates")
-        .select("id, title, content")
-        .eq("user_id", user.id);
+    if (error) {
+      console.error("Error fetching templates:", error);
+    } else {
+      setTemplates(data || []);
 
-      if (error) {
-        console.error("Error fetching templates:", error);
-      } else {
-        setTemplates(data || []);
+      // ✅ Auto-select if coming from "Use Template"
+      const storedTemplateId = localStorage.getItem("selectedTemplateId");
+      if (storedTemplateId && data?.some(t => t.id === storedTemplateId)) {
+        setSelectedTemplate(storedTemplateId);
+        localStorage.removeItem("selectedTemplateId"); // clear after use
       }
-    };
+    }
+  };
 
-    fetchTemplates();
-  }, []);
+  fetchTemplates();
+}, []);
+
 
   const handleGenerate = async () => {
     setLoading(true);
