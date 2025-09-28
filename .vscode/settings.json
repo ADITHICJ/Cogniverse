@@ -9,5 +9,19 @@
   "python.defaultInterpreterPath": "E:\\Hacker-ring\\PrepSmart\\backend\\.venv\\Scripts\\python.exe",
   "python.analysis.extraPaths": [
     "E:\\Hacker-ring\\PrepSmart\\backend\\.venv\\Lib\\site-packages"
-  ]
+  ],
+  "files.associations": {
+    "*.tsx": "typescriptreact",
+    "*.ts": "typescript",
+    "*.jsx": "javascriptreact",
+    "*.js": "javascript"
+  },
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "emmet.includeLanguages": {
+    "typescriptreact": "html",
+    "javascriptreact": "html"
+  },
+  "workbench.iconTheme": "vs-seti"
 }

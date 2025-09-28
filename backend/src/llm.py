@@ -82,25 +82,50 @@ def retrieve_top_k(prompt: str, collection_name: str, k: int = RAG_TOP_K) -> Lis
     return results.get("documents", [[]])[0] or []
 
 
+# ---------- Supabase Client ----------
+from supabase import create_client, Client
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print("✅ Supabase initialized successfully")
+else:
+    print("❌ SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing in environment variables")
+
 # ---------- Generator (RAG) ----------
-def generate_with_rag(prompt: str, grade: str = None, additional_ctx: str = "", temperature: float = 0.3) -> str:
+# services/backend/src/llm.py
+def generate_with_rag(
+    prompt: str,
+    grade: str = None,
+    additional_ctx: str = "",
+    template_id: str = None,
+    temperature: float = 0.3,
+) -> str:
     if not GENAI_AVAILABLE:
         print("⚠️ Gemini not available, generating mock lesson plan")
         return generate_mock_lesson(prompt)
 
     try:
-        # Query ChromaDB for relevant templates
-        template_docs = retrieve_top_k(prompt, "templates", k=2)
-        
-        # Create context from retrieved templates
         context = ""
-        if template_docs:
-            context = "Here are some relevant lesson plan templates:\n\n" + "\n\n---\n\n".join(template_docs)
-        
+
+        if template_id:
+            # ✅ Fetch teacher-created template from Supabase
+            template = supabase.table("templates").select("content").eq("id", template_id).single().execute()
+            if template.data:
+                context = f"Teacher selected this template:\n\n{template.data['content']}"
+        else:
+            # ✅ Fallback to Chroma RAG
+            template_docs = retrieve_top_k(prompt, "templates", k=2)
+            if template_docs:
+                context = "Here are some relevant lesson plan templates:\n\n" + "\n\n---\n\n".join(template_docs)
+
         if additional_ctx:
             context += f"\n\nAdditional Context:\n{additional_ctx}"
 
-        # Generate lesson plan using Gemini
+        # ✅ Gemini system prompt
         system_prompt = f"""You are PrepSmart, an AI lesson plan assistant.
 
 Create a comprehensive, detailed lesson plan based on the user's request.
@@ -119,10 +144,7 @@ User request: {prompt}
 
         response = gemini_model.generate_content(
             system_prompt,
-            generation_config={
-                "temperature": temperature,
-                "max_output_tokens": 8192,
-            },
+            generation_config={"temperature": temperature, "max_output_tokens": 8192},
         )
 
         if response and response.text:
@@ -130,10 +152,11 @@ User request: {prompt}
         else:
             print("⚠️ Empty response from Gemini, using mock")
             return generate_mock_lesson(prompt)
-            
+
     except Exception as e:
         print(f"❌ RAG generation failed: {e}")
         return generate_mock_lesson(prompt)
+
 
 
 def generate_mock_lesson(prompt: str) -> str:

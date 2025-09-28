@@ -13,24 +13,33 @@ export default function EditorPage() {
 
   const [draft, setDraft] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [currentContent, setCurrentContent] = useState("");
+
+  const fetchDraft = async () => {
+    const { data, error } = await supabase
+      .from("drafts")
+      .select("*")
+      .eq("id", draftId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching draft:", error);
+    } else {
+      setDraft(data);
+      setCurrentContent(data.content);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchDraft = async () => {
-      const { data, error } = await supabase
-        .from("drafts")
-        .select("*")
-        .eq("id", draftId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching draft:", error);
-      } else {
-        setDraft(data);
-      }
-      setLoading(false);
-    };
-
     fetchDraft();
+
+    const handleContentRestored = () => fetchDraft();
+    window.addEventListener("content-restored", handleContentRestored);
+
+    return () => {
+      window.removeEventListener("content-restored", handleContentRestored);
+    };
   }, [draftId]);
 
   if (loading) return <p>Loading draft...</p>;
@@ -43,7 +52,11 @@ export default function EditorPage() {
         <h1 className="text-xl font-bold mb-4">{draft.title}</h1>
         <RoomProvider id={`draft-${draft.id}`} initialPresence={{ cursor: null }}>
           <ClientSideSuspense fallback={<div>Loading collaborative editor...</div>}>
-            <CollaborativeEditor roomId={`draft-${draft.id}`} initialContent={draft.content} />
+            <CollaborativeEditor
+              roomId={`draft-${draft.id}`}
+              initialContent={draft.content}
+              onContentChange={setCurrentContent}
+            />
           </ClientSideSuspense>
         </RoomProvider>
       </div>

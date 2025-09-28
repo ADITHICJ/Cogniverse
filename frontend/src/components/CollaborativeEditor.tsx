@@ -157,9 +157,11 @@ const Toolbar = ({ editor }: { editor: any }) => {
 export default function CollaborativeEditor({
   roomId,
   initialContent,
+  onContentChange,
 }: {
   roomId: string;
   initialContent?: string;
+  onContentChange?: (content: string) => void;
 }) {
   const room = useRoom();
   const [ydoc] = useState(() => new Y.Doc());
@@ -188,6 +190,11 @@ export default function CollaborativeEditor({
         class: 'prose prose-lg max-w-none focus:outline-none min-h-[500px] p-6 leading-relaxed',
         style: 'font-family: "Inter", sans-serif;',
       },
+    },
+    onUpdate: ({ editor }) => {
+      if (onContentChange) {
+        onContentChange(editor.getHTML());
+      }
     },
   });
 
