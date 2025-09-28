@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/utils/supabaseClient";
 import CollaborativeEditor from "@/components/CollaborativeEditor";
 import { RoomProvider, ClientSideSuspense } from "@liveblocks/react/suspense";
+import HistorySidebar from "@/components/HistorySidebar";
 
 export default function EditorPage() {
   const params = useParams();
@@ -36,14 +37,21 @@ export default function EditorPage() {
   if (!draft) return <p>Draft not found</p>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">{draft.title}</h1>
+    <div className="flex h-[calc(100vh-4rem)]">
+      {/* Collaborative Editor */}
+      <div className="flex-1 p-6 overflow-auto">
+        <h1 className="text-xl font-bold mb-4">{draft.title}</h1>
+        <RoomProvider id={`draft-${draft.id}`} initialPresence={{ cursor: null }}>
+          <ClientSideSuspense fallback={<div>Loading collaborative editor...</div>}>
+            <CollaborativeEditor roomId={`draft-${draft.id}`} initialContent={draft.content} />
+          </ClientSideSuspense>
+        </RoomProvider>
+      </div>
 
-      <RoomProvider id={draft.id} initialPresence={{ cursor: null }}>
-        <ClientSideSuspense fallback={<div>Loading editor…</div>}>
-          <CollaborativeEditor roomId={draft.id} initialContent={draft.content} />
-        </ClientSideSuspense>
-      </RoomProvider>
+      {/* Sidebar - Draft History */}
+      <div className="w-80 border-l bg-gray-50 overflow-auto min-h-full">
+        <HistorySidebar draftId={draft.id} />
+      </div>
     </div>
   );
 }

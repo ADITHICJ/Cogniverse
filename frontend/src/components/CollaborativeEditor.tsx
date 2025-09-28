@@ -251,13 +251,22 @@ export default function CollaborativeEditor({
     setIsSaving(true);
     try {
       const content = editor.getHTML();
-      // TODO: Implement auto-save to backend
-      console.log('Saving content:', content);
-      
-      // Simulate save delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Extract draft ID from roomId (format: "draft-123")
+      const draftId = roomId.replace('draft-', '');
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/drafts/${draftId}/save_version`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        }
+      );
+      const data = await res.json();
+      console.log("Saved version:", data.version);
+      window.dispatchEvent(new Event("version-saved"));
     } catch (error) {
-      console.error('Save error:', error);
+      console.error("Save error:", error);
     } finally {
       setIsSaving(false);
     }

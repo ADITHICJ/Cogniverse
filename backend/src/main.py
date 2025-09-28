@@ -12,6 +12,7 @@ load_dotenv(backend_dir / ".env")
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from src.llm import generate_with_rag  # adjust import if needed
+from src.routes.drafts import router as drafts_router
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -29,6 +30,9 @@ app.add_middleware(
     allow_methods=["*"],  # allow POST, GET, OPTIONS, etc.
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(drafts_router)
 
 # -------- Request schema --------
 class GenerateRequest(BaseModel):
@@ -56,3 +60,5 @@ async def save_draft(draft: DraftCreate):
         return {"success": True, "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
