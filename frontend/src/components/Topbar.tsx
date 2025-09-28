@@ -1,4 +1,5 @@
-import React from 'react';
+import React from "react";
+import Link from "next/link";
 
 export default function TopBar() {
   return (
@@ -7,35 +8,82 @@ export default function TopBar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
-            <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <path d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z" fill="currentColor"></path>
+            <svg
+              className="h-8 w-8 text-blue-600"
+              fill="none"
+              viewBox="0 0 48 48"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z"
+                fill="currentColor"
+              ></path>
             </svg>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">PrepSmart</h1>
+            <Link href="/dashboard/teacher">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white cursor-pointer">
+                PrepSmart
+              </h1>
+            </Link>
           </div>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <a className="text-blue-600 font-semibold" href="#">Dashboard</a>
-            <a className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors" href="#">AI Content</a>
-            <a className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors" href="#">Template Library</a>
-            <a className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors" href="#">My Drafts</a>
+            <Link
+              href="/dashboard/teacher"
+              className="text-blue-600 font-semibold"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/dashboard/teacher/content"
+              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors"
+            >
+              AI Content
+            </Link>
+            <Link
+              href="/dashboard/teacher/templates"
+              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors"
+            >
+              Template Library
+            </Link>
+            <Link
+              href="/dashboard/teacher/drafts"
+              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors"
+            >
+              My Drafts
+            </Link>
           </nav>
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
+            {/* Notifications */}
             <button className="p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-              <svg className="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM9 7H4l5-5v5zM12 2v20" />
-              </svg>
+              <Link href="/dashboard/teacher/notifications">
+                <svg
+                  className="h-5 w-5 text-gray-600 dark:text-gray-300"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-5 5v-5zM9 7H4l5-5v5zM12 2v20"
+                  />
+                </svg>
+              </Link>
             </button>
+
+            {/* Profile */}
             <div className="relative">
-              <button className="flex items-center space-x-2">
-                <img 
-                  alt="User profile picture" 
-                  className="h-8 w-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" 
+              <Link href="/dashboard/teacher/profile">
+                <img
+                  alt="User profile picture"
+                  className="h-8 w-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 cursor-pointer"
                   src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                 />
-              </button>
+              </Link>
             </div>
           </div>
         </div>

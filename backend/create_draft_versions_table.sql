@@ -1,39 +1,53 @@
--- SQL to create the draft_versions table in Supabase
--- Run this in your Supabase SQL Editor
+-- 🚨 Drop old table if it exists
+drop table if exists public.draft_versions cascade;
 
-CREATE TABLE IF NOT EXISTS draft_versions (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    draft_id UUID NOT NULL,
-    content TEXT NOT NULL,
-    version_number INTEGER NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    -- Foreign key to drafts table
-    CONSTRAINT fk_draft_versions_draft_id 
-        FOREIGN KEY (draft_id) 
-        REFERENCES drafts(id) 
-        ON DELETE CASCADE
+-- ✅ Create new draft_versions table
+create table public.draft_versions (
+  id uuid primary key default gen_random_uuid(),
+  draft_id uuid not null references public.drafts(id) on delete cascade,
+  content text not null,
+  version_number integer not null,
+  created_at timestamp with time zone default now()
 );
 
--- Add index for better query performance
-CREATE INDEX IF NOT EXISTS idx_draft_versions_draft_id ON draft_versions(draft_id);
-CREATE INDEX IF NOT EXISTS idx_draft_versions_created_at ON draft_versions(created_at DESC);
+-- ✅ Index for faster lookups by draft_id
+create index draft_versions_draft_id_idx on public.draft_versions(draft_id);
 
--- Row Level Security (RLS) - same pattern as your drafts table
-ALTER TABLE draft_versions ENABLE ROW LEVEL SECURITY;
+-- Enable RLS
+alter table public.draft_versions enable row level security;
 
--- Policy to allow users to see versions of their own drafts
-CREATE POLICY "Users can view their own draft versions" ON draft_versions
-    FOR SELECT USING (
-        draft_id IN (
-            SELECT id FROM drafts WHERE user_id = auth.uid()
-        )
-    );
+-- Allow SELECT if user owns the parent draft
+create policy "Allow select own draft_versions"
+on public.draft_versions
+for select
+using (
+  exists (
+    select 1 from public.drafts d
+    where d.id = draft_versions.draft_id
+    and d.user_id = auth.uid()
+  )
+);
 
--- Policy to allow users to insert versions for their own drafts
-CREATE POLICY "Users can create versions for their own drafts" ON draft_versions
-    FOR INSERT WITH CHECK (
-        draft_id IN (
-            SELECT id FROM drafts WHERE user_id = auth.uid()
-        )
-    );
+-- Allow INSERT if user owns the parent draft
+create policy "Allow insert own draft_versions"
+on public.draft_versions
+for insert
+with check (
+  exists (
+    select 1 from public.drafts d
+    where d.id = draft_versions.draft_id
+    and d.user_id = auth.uid()
+  )
+);
+
+-- Allow DELETE if user owns the parent draft (needed for restore functionality)
+create policy "Allow delete own draft_versions"
+on public.draft_versions
+for delete
+using (
+  exists (
+    select 1 from public.drafts d
+    where d.id = draft_versions.draft_id
+    and d.user_id = auth.uid()
+  )
+);

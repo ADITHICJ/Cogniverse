@@ -37,7 +37,7 @@ export default function SignupPage() {
         onSubmit={handleSignup}
         className="bg-white p-8 rounded-lg shadow-md w-96"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-indigo-600">
+        <h2 className="text-2xl font-bold mb-6 text-center text-blue-600">
           Signup
         </h2>
         {error && <p className="text-red-500 mb-3">{error}</p>}
@@ -70,7 +70,7 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          className="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700"
+          className="w-full text-white p-3 rounded hover:bg-indigo-700"
         >
           Signup
         </button>
