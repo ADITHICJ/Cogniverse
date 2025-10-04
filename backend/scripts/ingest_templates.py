@@ -1,79 +1,47 @@
-import os
+# backend/scripts/ingest_templates.py
 import sys
 from pathlib import Path
-import chromadb
 from dotenv import load_dotenv
 
-# Add backend directory to path for importing src modules
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BACKEND_DIR))
+# === Path setup ===
+BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
+SRC_DIR = BASE_DIR / "src"
+sys.path.insert(0, str(BASE_DIR))  # Add backend/ to path instead of src/
 
-# Load env from backend directory
-load_dotenv(BACKEND_DIR / ".env")
+# === Load environment ===
+load_dotenv()
 
-# Import templates + embedding helper from src
+# === Imports ===
 from src.templates_data import TEMPLATES
 from src.llm import embed_texts
-CHROMA_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+from src.supabase_vector import upsert_text_chunks, create_tables_if_not_exists
 
-# Setup Chroma client 
-print(f"[INFO] Attempting to connect to ChromaDB at: {CHROMA_DIR}")
-
-# First, let's try to remove any lock files that might be preventing connection
-import shutil
-lock_file = os.path.join(CHROMA_DIR, "chroma.sqlite3-wal")
-if os.path.exists(lock_file):
-    try:
-        os.remove(lock_file)
-        print("[INFO] Removed ChromaDB lock file")
-    except:
-        pass
-
-try:
-    client = chromadb.PersistentClient(path=CHROMA_DIR)
-    print(f"[INFO] Successfully connected to ChromaDB at: {CHROMA_DIR}")
-except ValueError as e:
-    if "already exists" in str(e):
-        print("[WARNING] ChromaDB instance already active. This usually means:")
-        print("  1. Your FastAPI server is running and using ChromaDB")
-        print("  2. Another script is accessing the database")
-        print("  3. Previous process didn't close properly")
-        print("\nOptions:")
-        print("  - Stop your FastAPI server (uvicorn) before running ingestion")
-        print("  - Or run this script while the server is stopped")
-        
-        # For now, we'll exit with a helpful message
-        print(f"\n❌ Cannot proceed with ingestion while ChromaDB is in use.")
-        print("💡 Please stop other processes using ChromaDB and try again.")
-        exit(1)
-    else:
-        raise e
-
-# Use a dedicated collection for templates
-try:
-    client.delete_collection("templates")
-    print("[INFO] Deleted existing 'templates' collection (reset).")
-except Exception:
-    pass
-collection = client.get_or_create_collection("templates")
 
 # ------------------ INGEST ------------------
 
 def ingest_templates():
+    """Embed and store all templates into the 'templates' table."""
+    create_tables_if_not_exists(768)
+
+    records = []
     for tmpl in TEMPLATES:
         emb = embed_texts([tmpl["content"]])[0]
-        collection.add(
-            ids=[tmpl["id"]],
-            documents=[tmpl["content"]],
-            metadatas={
+        rec = {
+            "id": tmpl["id"],
+            "document": tmpl["content"],
+            "metadata": {
                 "title": tmpl["title"],
-                "subject": tmpl["subject"],
+                "subject": tmpl.get("subject", "general"),
                 "type": "template"
             },
-            embeddings=[emb]
-        )
-        print(f"✅ Ingested template: {tmpl['title']} ({tmpl['subject']})")
+            "embedding": emb
+        }
+        records.append(rec)
+
+    upsert_text_chunks("templates", records)
+    print(f"✅ Ingested {len(records)} templates into Supabase Postgres.")
+
 
 if __name__ == "__main__":
     ingest_templates()
-    print("🎉 All templates ingested into ChromaDB!")
+    print("🎉 All templates ingested successfully!")

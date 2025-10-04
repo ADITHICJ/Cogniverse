@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
 import { useRouter } from "next/navigation";
 import TopBar from "@/components/Topbar";
-// TopBar Component (inline for consistency)
-<TopBar/>
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -13,10 +11,28 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     const fetchTemplates = async () => {
-      const { data, error } = await supabase.from("templates").select("*");
-      if (error) console.error("Error fetching templates:", error);
-      else setTemplates(data);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.error("No user logged in");
+        setTemplates([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("user_templates") // ✅ fetch metadata, not vectors
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Error fetching templates:", error);
+      } else {
+        setTemplates(data || []);
+      }
     };
+
     fetchTemplates();
   }, []);
 
@@ -175,13 +191,13 @@ export default function TemplatesPage() {
 
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleEdit(tpl.id)} // ✅ Edit
+                        onClick={() => handleEdit(tpl.id)}
                         className="flex-1 text-center px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => handleUseTemplate(tpl.id)} // ✅ Use Template
+                        onClick={() => handleUseTemplate(tpl.id)}
                         className="flex-1 text-center px-3 py-1.5 text-sm bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-md hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
                       >
                         Use Template

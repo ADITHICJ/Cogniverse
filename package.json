@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@supabase/ssr": "^0.7.0",
     "diff-match-patch": "^1.0.5",
     "react-diff-viewer": "^3.1.1",
     "turndown": "^7.2.1"

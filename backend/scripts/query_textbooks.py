@@ -1,41 +1,47 @@
-import chromadb
+# backend/scripts/query_textbooks.py
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables
+# === Path setup ===
+BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
+SRC_DIR = BASE_DIR / "src"
+sys.path.insert(0, str(SRC_DIR))
+
+# === Load environment ===
 load_dotenv()
 
-# Import llm.py helpers
-current_dir = Path(__file__).resolve().parent.parent / "src"
-sys.path.insert(0, str(current_dir))
-from llm import embed_texts
+# === Imports ===
+from src.llm import embed_texts
+from src.supabase_vector import retrieve_top_k_by_embedding
 
-CHROMA_DIR = "./chroma_db"
 
-client = chromadb.PersistentClient(path=CHROMA_DIR)
-collection = client.get_or_create_collection("textbooks")
+def query_textbooks(prompt: str, k: int = 3):
+    """
+    Perform a semantic search in the textbooks table using pgvector similarity.
+    """
+    print(f"🔍 Querying top {k} relevant textbook chunks for prompt:\n→ {prompt}\n")
 
-query = "What is photosynthesis?"
-print(f"📥 Querying ChromaDB (textbooks) for: {query}")
+    # Step 1: Embed the user query with Gemini
+    query_vector = embed_texts([prompt])[0]
 
-query_embedding = embed_texts([query])[0]
+    # Step 2: Retrieve top-k similar chunks from Postgres
+    results = retrieve_top_k_by_embedding("textbooks", query_vector, k=k)
 
-results = collection.query(
-    query_embeddings=[query_embedding],
-    n_results=3
-)
+    # Step 3: Display results
+    if not results:
+        print("⚠️ No matching chunks found.")
+        return
 
-if results and "documents" in results:
-    docs = results["documents"][0]
-    metas = results["metadatas"][0]
-    ids = results["ids"][0]
+    for idx, row in enumerate(results, start=1):
+        meta = row["metadata"]
+        subject = meta.get("subject", "unknown")
+        grade = meta.get("grade", "unknown")
+        print(f"\n📘 Result {idx}: (Subject={subject}, Grade={grade}, Distance={row['distance']:.4f})")
+        print("-" * 80)
+        print(row["document"][:600])  # show first 600 chars for preview
 
-    print("\n✅ Top textbook results:")
-    for i, (doc, meta, _id) in enumerate(zip(docs, metas, ids), start=1):
-        print(f"\nResult {i}:")
-        print(f"ID: {_id}")
-        print(f"Metadata: {meta}")
-        print(f"Snippet: {doc[:300]}...")
-else:
-    print("⚠️ No documents found in textbooks collection")
+
+if __name__ == "__main__":
+    # Example usage
+    query_textbooks("explain photosynthesis for grade 8 science", k=3)

@@ -1,202 +1,198 @@
-# services/backend/src/llm.py
 import os
 import re
-from typing import List
-import chromadb
+from typing import List, Optional
+from dotenv import load_dotenv
+
+# === Load env ===
+load_dotenv()
 
 # ---------- Clean output ----------
-def clean_html_output(text: str) -> str:
-    """Strip ```html ... ``` fences if Gemini adds them."""
-    return re.sub(r"```[a-zA-Z]*\n?", "", text).replace("```", "").strip()
+import re
+from markdownify import markdownify as md
 
+def clean_text_output(text: str) -> str:
+    """Convert Gemini output into clean Markdown."""
+    if not text:
+        return ""
+
+    # Remove code fences if Gemini adds them
+    text = re.sub(r"```[a-zA-Z]*\n?", "", text)
+    text = text.replace("```", "").strip()
+
+    # Convert HTML → Markdown if it looks like HTML
+    if "<p>" in text or "<div>" in text or "<ul>" in text or "<h" in text:
+        text = md(text, heading_style="ATX")  # convert to # Headings, - lists
+
+    # Normalize spacing
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+
+    return text.strip()
 
 # ---------- ENV CONFIG ----------
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-GEN_MODEL = os.getenv("GEMINI_GENERATION_MODEL", "gemini-1.5-flash")
-CHROMA_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+GEN_MODEL = os.getenv("GEMINI_GENERATION_MODEL", "gemini-2.5-flash")
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "3"))
 
-# Init Chroma client (shared)
-chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
-
-# Initialize Google GenAI client with better logging
-GENAI_AVAILABLE = False
-gemini_model = None
-
+# ---------- Google GenAI Client ----------
 try:
     import google.generativeai as genai
-
-    if not GEMINI_KEY:
-        raise ValueError("❌ GEMINI_API_KEY is missing in environment variables")
-
-    # Configure with API key
     genai.configure(api_key=GEMINI_KEY)
-
-    # Try creating model
     gemini_model = genai.GenerativeModel(GEN_MODEL)
     GENAI_AVAILABLE = True
-    print(f"✅ Gemini initialized successfully with model: {GEN_MODEL}")
-
 except ImportError:
-    print("❌ google-generativeai is not installed. Run: pip install google-generativeai")
-except ValueError as e:
-    print(f"{e}")
-except Exception as e:
-    print(f"❌ Failed to initialize Gemini. Reason: {type(e).__name__} - {e}")
+    GENAI_AVAILABLE = False
+    print("[WARNING] Google GenerativeAI not available - RAG features disabled")
+
+# ---------- Import Supabase Vector Helpers ----------
+from src.supabase_vector import retrieve_top_k_by_embedding
 
 
 # ---------- Embeddings ----------
 def embed_texts(texts: List[str]) -> List[List[float]]:
     """Call Gemini embeddings (returns list of vectors)."""
     if not GENAI_AVAILABLE:
-        print("⚠️ Gemini not available, returning dummy embeddings")
-        return [[0.1] * 768 for _ in texts]
+        raise RuntimeError("Google GenerativeAI not available")
 
-    try:
-        vectors = []
-        for text in texts:
+    vectors = []
+    for text in texts:
+        try:
             result = genai.embed_content(
-                model=os.getenv("GEMINI_EMBEDDING_MODEL", "models/text-embedding-004"),
+                model="models/text-embedding-004",
                 content=text,
                 task_type="retrieval_document",
             )
             embedding = result["embedding"]
-            print(f"[DEBUG] Created embedding ({len(embedding)} dims)")
+            print(f"[DEBUG] Embedding dimension: {len(embedding)}")
             vectors.append(embedding)
-        return vectors
-    except Exception as e:
-        print(f"❌ Embedding failed: {e}")
-        return [[0.1] * 768 for _ in texts]  # fallback
+        except Exception as e:
+            print(f"[ERROR] Embedding failed: {e}")
+            vectors.append([0.0] * 768)  # fallback dummy vector
+    return vectors
 
 
 # ---------- Retriever ----------
-def retrieve_top_k(prompt: str, collection_name: str, k: int = RAG_TOP_K) -> List[str]:
-    """Query Chroma for nearest docs from a given collection."""
+def retrieve_top_k(prompt: str, collection_name: str, user_id: Optional[str] = None, k: int = RAG_TOP_K) -> List[dict]:
+    """Retrieve documents from vector tables. Supports system + user templates."""
     prompt_embedding = embed_texts([prompt])[0]
-    collection = chroma_client.get_or_create_collection(collection_name)
 
-    results = collection.query(
-        query_embeddings=[prompt_embedding],
-        n_results=k,
-    )
-    return results.get("documents", [[]])[0] or []
+    results = []
+    if collection_name == "templates":
+        # system templates
+        results += retrieve_top_k_by_embedding("templates", prompt_embedding, k=k)
 
+        # user templates
+        if user_id:
+            user_results = retrieve_top_k_by_embedding("user_templates_vector", prompt_embedding, k=k)
+            user_results = [r for r in user_results if str(r["metadata"].get("user_id")) == str(user_id)]
+            results += user_results
 
-# ---------- Supabase Client ----------
-from supabase import create_client, Client
+    elif collection_name == "textbooks":
+        results += retrieve_top_k_by_embedding("textbooks", prompt_embedding, k=k)
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    results = sorted(results, key=lambda x: x.get("distance", 9999))
+    return results[:k]
 
-supabase: Client = None
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print("✅ Supabase initialized successfully")
-else:
-    print("❌ SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing in environment variables")
 
 # ---------- Generator (RAG) ----------
-# services/backend/src/llm.py
 def generate_with_rag(
     prompt: str,
     grade: str = None,
+    user_id: Optional[str] = None,
+    selected_template: Optional[str] = None,
     additional_ctx: str = "",
-    template_id: str = None,
     temperature: float = 0.3,
 ) -> str:
+    """RAG-powered generation with Gemini + system/user templates."""
     if not GENAI_AVAILABLE:
-        print("⚠️ Gemini not available, generating mock lesson plan")
-        return generate_mock_lesson(prompt)
+        raise RuntimeError("Google GenerativeAI not available")
 
-    try:
-        context = ""
+    # --- Detect grade & subject ---
+    prompt_lower = prompt.lower()
+    grade = grade or None
+    if grade is None:
+        for g in ["6", "7", "8", "9", "10", "11", "12"]:
+            if f"grade {g}" in prompt_lower or f"class {g}" in prompt_lower:
+                grade = g
+                break
 
-        if template_id:
-            # ✅ Fetch teacher-created template from Supabase
-            template = supabase.table("templates").select("content").eq("id", template_id).single().execute()
-            if template.data:
-                context = f"Teacher selected this template:\n\n{template.data['content']}"
-        else:
-            # ✅ Fallback to Chroma RAG
-            template_docs = retrieve_top_k(prompt, "templates", k=2)
-            if template_docs:
-                context = "Here are some relevant lesson plan templates:\n\n" + "\n\n---\n\n".join(template_docs)
+    subject = None
+    for subj in ["science", "math", "english", "history", "geography", "civics", "computer science"]:
+        if subj in prompt_lower:
+            subject = subj
+            break
 
-        if additional_ctx:
-            context += f"\n\nAdditional Context:\n{additional_ctx}"
+    topic = prompt
 
-        # ✅ Gemini system prompt
-        system_prompt = f"""You are PrepSmart, an AI lesson plan assistant.
+    # --- Query Supabase (textbooks) ---
+    tb_docs = retrieve_top_k(prompt, "textbooks", k=3)
 
-Create a comprehensive, detailed lesson plan based on the user's request.
-Grade level: {grade or "not specified"}
-Use the provided templates as inspiration but create original content.
+    # --- Templates logic ---
+    tmpl_docs = []
+    if selected_template:
+        tmpl_results = retrieve_top_k(prompt, "templates", user_id=user_id, k=10)
+        tmpl_docs = [d for d in tmpl_results if str(d["id"]) == str(selected_template)]
+    else:
+        tmpl_docs = retrieve_top_k(prompt, "templates", user_id=None, k=1)
 
-IMPORTANT: Return ONLY in Markdown format.
-- Bold for section titles (e.g., **Lesson Title:** Photosynthesis)
-- Blank lines between sections
-- Bulleted lists or numbered lists where appropriate
-- No HTML, XML, or other markup (no < or >)
-User request: {prompt}
+    # --- Build context ---
+    relevant_context_parts = []
 
-{context}
+    subject_keywords = ["math", "science", "biology", "chemistry", "physics", "history", "geography", "algebra", "geometry", "literature"]
+    prompt_mentions_subject = any(keyword in prompt_lower for keyword in subject_keywords)
+
+    if tb_docs and prompt_mentions_subject:
+        relevant_context_parts.append("📘 Textbook Knowledge:\n" + "\n\n".join([d["document"] for d in tb_docs]))
+
+    if tmpl_docs:
+        relevant_context_parts.append("📑 Templates (system + user):\n" + "\n\n".join([d["document"] for d in tmpl_docs]))
+
+    if additional_ctx:
+        relevant_context_parts.append("💡 Extra Context:\n" + additional_ctx)
+
+    context = "\n\n---\n\n".join(relevant_context_parts) if relevant_context_parts else ""
+
+    # --- Instruction for Gemini ---
+    system_prompt = f"""
+You are PrepSmart, an AI teaching content assistant.
+
+At the beginning of your response, ALWAYS include this header (with one blank line between each line):
+
+Grade Level: {grade or "not specified"}  
+Subject: {subject or "general"}  
+Topic: {topic}  
+Total Time Required: (estimate in minutes)  
+
+---
+
+Then continue by filling the provided template or generating structured content.
 """
 
+    full_prompt = f"{system_prompt}\n\nContext:\n{context}\n\nUser request:\n{prompt}"
+
+    try:
         response = gemini_model.generate_content(
-            system_prompt,
-            generation_config={"temperature": temperature, "max_output_tokens": 8192},
+            full_prompt,
+            generation_config={
+                "temperature": temperature,
+                "max_output_tokens": 8192,
+                "top_p": 0.8,
+                "top_k": 40,
+            },
         )
 
-        if response and response.text:
-            return clean_html_output(response.text)
-        else:
-            print("⚠️ Empty response from Gemini, using mock")
-            return generate_mock_lesson(prompt)
+        text_out = getattr(response, "text", None)
+        if not text_out and hasattr(response, "candidates"):
+            parts = []
+            for cand in response.candidates:
+                if cand.content and cand.content.parts:
+                    for part in cand.content.parts:
+                        if hasattr(part, "text") and part.text:
+                            parts.append(part.text)
+            text_out = "\n".join(parts) if parts else None
+
+        return clean_text_output(text_out) if text_out else "No content generated"
 
     except Exception as e:
-        print(f"❌ RAG generation failed: {e}")
-        return generate_mock_lesson(prompt)
-
-
-
-def generate_mock_lesson(prompt: str) -> str:
-    """Generate a mock lesson plan for development/fallback"""
-    return f"""
-    <div class="lesson-plan">
-        <h1>📚 Lesson Plan</h1>
-        <div class="prompt-section">
-            <h2>🎯 Based on your request:</h2>
-            <blockquote>"{prompt}"</blockquote>
-        </div>
-        <div class="objectives-section">
-            <h2>🎯 Learning Objectives</h2>
-            <ul>
-                <li>Students will understand key concepts related to the topic</li>
-                <li>Students will be able to apply critical thinking skills</li>
-                <li>Students will demonstrate understanding through activities</li>
-            </ul>
-        </div>
-        <div class="activities-section">
-            <h2>🚀 Lesson Activities</h2>
-            <div class="activity">
-                <h3>📍 Opening (10 minutes)</h3>
-                <p>Introduction and engagement activity to activate prior knowledge.</p>
-            </div>
-            <div class="activity">
-                <h3>📍 Main Activity (30 minutes)</h3>
-                <p>Core learning experience with hands-on exploration.</p>
-            </div>
-            <div class="activity">
-                <h3>📍 Closure (10 minutes)</h3>
-                <p>Reflection and summary of key learning points.</p>
-            </div>
-        </div>
-        <div class="assessment-section">
-            <h2>📝 Assessment</h2>
-            <ul>
-                <li><strong>Formative:</strong> Observation and questioning during activities</li>
-                <li><strong>Summative:</strong> Exit ticket or short quiz</li>
-            </ul>
-        </div>
-    </div>
-    """
+        print(f"[ERROR] Generation failed: {e}")
+        return f"Error generating content: {str(e)}"

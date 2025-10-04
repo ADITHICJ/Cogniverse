@@ -14,13 +14,14 @@ export default function EditTemplatePage() {
   useEffect(() => {
     const fetchTemplate = async () => {
       const { data, error } = await supabase
-        .from("templates")
+        .from("user_templates") // ✅ use user_templates table
         .select("*")
         .eq("id", templateId)
         .single();
 
-      if (error) console.error("Error fetching template:", error);
-      else {
+      if (error) {
+        console.error("Error fetching template:", error);
+      } else if (data) {
         setTitle(data.title);
         setContent(data.content);
       }
@@ -29,17 +30,36 @@ export default function EditTemplatePage() {
   }, [templateId]);
 
   const handleUpdate = async () => {
-    const { error } = await supabase
-      .from("templates")
+    // Step 1: Update user_templates (metadata)
+    const { data, error } = await supabase
+      .from("user_templates")
       .update({ title, content })
-      .eq("id", templateId);
+      .eq("id", templateId)
+      .select()
+      .single();
 
     if (error) {
       console.error("Error updating template:", error);
       alert("❌ Failed to update template");
-    } else {
-      router.push("/dashboard/teacher/templates");
+      return;
     }
+
+    try {
+      // Step 2: Call backend API to update vector embedding
+      const resp = await fetch("/api/embed-user-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data), // send updated template record
+      });
+
+      if (!resp.ok) throw new Error("Embedding failed");
+      console.log("✅ Template embedding updated in user_templates_vector");
+    } catch (err) {
+      console.error("Embedding error:", err);
+      alert("⚠️ Template updated but embedding not refreshed");
+    }
+
+    router.push("/dashboard/teacher/templates");
   };
 
   return (

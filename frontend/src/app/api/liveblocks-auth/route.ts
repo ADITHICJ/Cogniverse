@@ -17,6 +17,16 @@ const supabase = createClient(
 export async function POST(req: Request) {
   try {
     console.log("🔐 Liveblocks auth request received");
+    console.log("🔑 LIVEBLOCKS_SECRET_KEY available:", !!process.env.LIVEBLOCKS_SECRET_KEY);
+    console.log("🔑 LIVEBLOCKS_SECRET_KEY format:", process.env.LIVEBLOCKS_SECRET_KEY?.substring(0, 10) + "...");
+    
+    // Validate Liveblocks SDK initialization
+    try {
+      const testSession = liveblocks.prepareSession("test-user", { userInfo: { name: "test" } });
+      console.log("✅ Liveblocks SDK initialized correctly");
+    } catch (lbError) {
+      console.error("❌ Liveblocks SDK initialization error:", lbError);
+    }
     
     const body = await req.json();
     const { room, supabaseToken } = body;
@@ -54,20 +64,77 @@ export async function POST(req: Request) {
 
     console.log("✅ Supabase user verified:", { userId: user.id, email: user.email });
 
+    // ✅ Fetch user profile for full name and role
+    console.log("🔍 Fetching profile for user in Liveblocks auth:", user.id);
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("full_name, role")
+      .eq("id", user.id)
+      .single();
+
+    console.log("👤 Profile data in Liveblocks auth:", profile);
+    console.log("❌ Profile error in Liveblocks auth:", profileError);
+
+    const userName = profile?.full_name || user.email || "Unknown";
+    const userRole = profile?.role || "teacher";
+    
+    console.log("✅ Final userName for Liveblocks:", userName);
+
     // ✅ Prepare Liveblocks session
     const session = liveblocks.prepareSession(user.id, {
       userInfo: {
-        name: user.email ?? "Unknown",
-        role: "teacher", // You can fetch role from Supabase `profiles` table
+        name: userName,
+        role: userRole,
       },
     });
+
+    // ✅ Check if user has access to this room (draft)
+    const draftId = room.replace('draft-', '');
+    console.log("🔍 Checking access for:", { userId: user.id, email: user.email, draftId });
+    
+    // Check if user owns the draft or is a collaborator
+    const { data: draft, error: draftError } = await supabase
+      .from("drafts")
+      .select("user_id")
+      .eq("id", draftId)
+      .single();
+
+    console.log("📄 Draft query result:", { draft, draftError });
+
+    const { data: collaborations, error: collabError } = await supabase
+      .from("draft_collaborators")
+      .select("id")
+      .eq("draft_id", draftId)
+      .eq("user_id", user.id);
+
+    console.log("👥 Collaboration query result:", { collaborations, collabError, count: collaborations?.length || 0 });
+
+    const isOwner = draft && draft.user_id === user.id;
+    const isCollaborator = collaborations && collaborations.length > 0;
+    const hasAccess = isOwner || isCollaborator;
+
+    console.log("🔐 Access check:", { isOwner, isCollaborator, hasAccess });
+
+    if (!hasAccess) {
+      console.error("❌ User doesn't have access to this draft:", { 
+        userId: user.id, 
+        email: user.email, 
+        draftId, 
+        draftOwner: draft?.user_id,
+        collaborationCount: collaborations?.length || 0
+      });
+      return NextResponse.json({ error: "Access denied to this draft" }, { status: 403 });
+    }
+
+    console.log("✅ User has access to draft:", { userId: user.id, draftId, isOwner: draft?.user_id === user.id });
 
     // ✅ Authorize access for this user in the given room
     session.allow(room, session.FULL_ACCESS);
 
     // ✅ Return Liveblocks auth token
     const result = await session.authorize();
-    console.log("✅ Liveblocks auth successful");
+    console.log("✅ Liveblocks auth successful for room:", room);
+    console.log("✅ Auth result:", result);
     return NextResponse.json(result);
   } catch (err) {
     console.error("❌ Liveblocks auth error:", err);

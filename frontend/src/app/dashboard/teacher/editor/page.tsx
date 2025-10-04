@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabaseClient";
+import { showNotification } from "@/utils/notifications";
+import NotificationToast from "@/components/NotificationToast";
 
 export default function EditorPage() {
   const router = useRouter();
@@ -21,7 +23,7 @@ export default function EditorPage() {
       // Create a new draft in the database
       const { data, error } = await supabase
         .from("drafts")
-        .insert({ title: "Untitled Draft", user_id: user.id })
+        .insert({ title: "Untitled", user_id: user.id })
         .select()
         .single();
 
@@ -31,7 +33,7 @@ export default function EditorPage() {
       router.push(`/dashboard/teacher/editor/${data.id}`);
     } catch (error) {
       console.error("Error creating new draft:", error);
-      alert("Failed to create a new draft.");
+      showNotification("Failed to create a new draft. Please try again.", "error");
     } finally {
       setIsCreating(false);
     }
@@ -39,6 +41,7 @@ export default function EditorPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)]">
+      <NotificationToast />
       <h1 className="text-2xl font-bold mb-4">Editor</h1>
       <p className="text-gray-600 mb-8">Select a draft from the sidebar or create a new one.</p>
       <button

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, AlertTriangle, Eye, RotateCcw } from "lucide-react";
+import { marked } from "marked";
 
 interface Version {
   id: string;
@@ -18,19 +19,18 @@ interface VersionModalProps {
   totalVersions: number;
 }
 
-const ConfirmationDialog = ({ 
-  version, 
-  onConfirm, 
-  onCancel, 
-  versionsToDelete 
-}: { 
-  version: Version; 
-  onConfirm: () => void; 
+const ConfirmationModal = ({
+  onConfirm,
+  onCancel,
+  versionsToDelete,
+  version,
+}: {
+  onConfirm: () => void;
   onCancel: () => void;
   versionsToDelete: number;
+  version: Version;
 }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
+  <div className="fixed inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
       <div className="p-6">
         <div className="flex items-center mb-4">
           <div className="flex-shrink-0">
@@ -78,6 +78,28 @@ const VersionModal = ({ version, onClose, isRestoring, onConfirmRestore, totalVe
   
   const versionsToDelete = totalVersions - version.version_number;
   
+  // Process content to ensure proper formatting
+  const getFormattedContent = (content: string) => {
+    try {
+      // If content looks like HTML, return as-is
+      if (content.startsWith('<') && content.includes('>')) {
+        return content;
+      }
+      
+      // If content is empty or just whitespace, show placeholder
+      if (!content || content.trim() === '') {
+        return '<p class="text-gray-500 italic">No content in this version</p>';
+      }
+      
+      // Convert markdown to HTML
+      return marked(content);
+    } catch (error) {
+      console.error('Error formatting content:', error);
+      // Fallback: wrap in paragraph tags and escape HTML
+      return `<p>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
+    }
+  };
+  
   const handleRestoreClick = () => {
     setShowConfirmation(true);
   };
@@ -89,7 +111,7 @@ const VersionModal = ({ version, onClose, isRestoring, onConfirmRestore, totalVe
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
+      <div className="fixed inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-sm flex items-center justify-center z-40 p-4">
         <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col">
           {/* Header */}
           <div className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-xl flex justify-between items-center">
@@ -122,27 +144,42 @@ const VersionModal = ({ version, onClose, isRestoring, onConfirmRestore, totalVe
                 </div>
               </div>
               
-              {/* Content with better styling and scrolling */}
-              <div className="border-2 border-gray-200 rounded-lg bg-gray-50">
-                <div className="sticky top-0 bg-gray-100 px-4 py-2 border-b border-gray-200">
+              {/* Content with editor-like styling */}
+              <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="sticky top-0 bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b border-gray-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">
+                    <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <Eye size={16} />
                       Version {version.version_number} Content
                     </span>
-                    <div className="text-xs text-gray-500">
-                      {version.content.length} characters
+                    <div className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
+                      {version.content ? version.content.length : 0} chars
                     </div>
                   </div>
                 </div>
                 
-                <div className="max-h-96 overflow-y-auto">
+                <div className="max-h-96 overflow-y-auto bg-white">
                   <div
-                    className="prose prose-sm max-w-none p-6 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: version.content }}
+                    className="prose prose-lg max-w-none focus:outline-none min-h-[200px] p-6 leading-relaxed prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-em:text-gray-600 prose-code:text-blue-600 prose-code:bg-blue-50 prose-pre:bg-gray-800 prose-blockquote:border-blue-300 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-li:text-gray-700"
+                    dangerouslySetInnerHTML={{ 
+                      __html: getFormattedContent(version.content)
+                    }}
                     style={{
-                      fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+                      fontFamily: '"Inter", sans-serif',
+                      lineHeight: '1.75',
                     }}
                   />
+                </div>
+                
+                {/* Footer with content info */}
+                <div className="bg-gray-50 px-4 py-2 border-t text-xs text-gray-500 flex justify-between items-center">
+                  <div>
+                    Content preview - matches editor formatting
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>Read-only view</span>
+                    <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -182,7 +219,7 @@ const VersionModal = ({ version, onClose, isRestoring, onConfirmRestore, totalVe
       
       {/* Confirmation Dialog */}
       {showConfirmation && (
-        <ConfirmationDialog
+        <ConfirmationModal
           version={version}
           onConfirm={handleConfirmRestore}
           onCancel={() => setShowConfirmation(false)}

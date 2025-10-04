@@ -1,69 +1,29 @@
+# backend/scripts/ingest_textbooks.py
 import os
-import uuid
 import sys
 from pathlib import Path
 import pdfplumber
-import chromadb
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent.parent  # services/backend
+# === Path setup ===
+BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
 SRC_DIR = BASE_DIR / "src"
-sys.path.insert(0, str(BASE_DIR))  # Add backend directory to path
+sys.path.insert(0, str(SRC_DIR))
 
-# Load env from backend directory
-load_dotenv(BASE_DIR / ".env")
-CHROMA_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+# === Load environment ===
+load_dotenv()
 
-# Import Gemini embedding helper from src
-from src.llm import embed_texts  
+# === Imports ===
+from src.llm import embed_texts
+from src.supabase_vector import upsert_text_chunks, create_tables_if_not_exists
 
-# Setup Chroma client 
-print(f"[INFO] Attempting to connect to ChromaDB at: {CHROMA_DIR}")
-
-# First, let's try to remove any lock files that might be preventing connection
-import shutil
-lock_file = os.path.join(CHROMA_DIR, "chroma.sqlite3-wal")
-if os.path.exists(lock_file):
-    try:
-        os.remove(lock_file)
-        print("[INFO] Removed ChromaDB lock file")
-    except:
-        pass
-
-try:
-    client = chromadb.PersistentClient(path=CHROMA_DIR)
-    print(f"[INFO] Successfully connected to ChromaDB at: {CHROMA_DIR}")
-except ValueError as e:
-    if "already exists" in str(e):
-        print("[WARNING] ChromaDB instance already active. This usually means:")
-        print("  1. Your FastAPI server is running and using ChromaDB")
-        print("  2. Another script is accessing the database")
-        print("  3. Previous process didn't close properly")
-        print("\nOptions:")
-        print("  - Stop your FastAPI server (uvicorn) before running ingestion")
-        print("  - Or run this script while the server is stopped")
-        
-        # For now, we'll exit with a helpful message
-        print(f"\n❌ Cannot proceed with ingestion while ChromaDB is in use.")
-        print("💡 Please stop other processes using ChromaDB and try again.")
-        exit(1)
-    else:
-        raise e
-
-# Use a dedicated collection for textbooks
-try:
-    client.delete_collection("textbooks")
-    print("[INFO] Deleted existing 'textbooks' collection (reset).")
-except Exception:
-    pass
-collection = client.get_or_create_collection("textbooks")
-
-# Folder for textbooks
+# === Directory for PDFs ===
 PDF_DIR = Path(__file__).parent / "pdfs"
 
 # ------------------ HELPERS ------------------
 
 def extract_text_from_pdf(pdf_path: Path) -> str:
+    """Extract plain text from PDF file."""
     text = ""
     with pdfplumber.open(str(pdf_path)) as pdf:
         for page in pdf.pages:
@@ -72,12 +32,16 @@ def extract_text_from_pdf(pdf_path: Path) -> str:
                 text += page_text + "\n"
     return text.strip()
 
+
 def chunk_text(text: str, size: int = 250):
+    """Split text into chunks of `size` words."""
     words = text.split()
     for i in range(0, len(words), size):
-        yield " ".join(words[i:i+size])
+        yield " ".join(words[i:i + size])
+
 
 def detect_subject_and_grade(filename: str):
+    """Detect subject and grade from filename."""
     name = filename.lower()
     grade = None
     subject = "general"
@@ -97,7 +61,9 @@ def detect_subject_and_grade(filename: str):
 
     return subject, grade or "unknown"
 
+
 def ingest_pdf(pdf_path: Path):
+    """Ingest a single PDF file into the textbooks table."""
     subject, grade = detect_subject_and_grade(pdf_path.name)
     print(f"📥 Ingesting {pdf_path.name} (Subject={subject}, Grade={grade})")
 
@@ -110,23 +76,33 @@ def ingest_pdf(pdf_path: Path):
 
     embeddings = embed_texts(chunks)
 
-    ids = [f"{pdf_path.stem}-{i}" for i in range(len(chunks))]
-    metas = [
-        {"type": "pdf", "subject": subject, "grade": grade, "source": pdf_path.name, "chunk_index": i}
-        for i in range(len(chunks))
-    ]
+    records = []
+    for i, chunk in enumerate(chunks):
+        _id = f"{pdf_path.stem}-{i}"
+        meta = {
+            "type": "pdf",
+            "subject": subject,
+            "grade": grade,
+            "source": pdf_path.name,
+            "chunk_index": i
+        }
+        records.append({
+            "id": _id,
+            "document": chunk,
+            "metadata": meta,
+            "embedding": embeddings[i]
+        })
 
-    collection.add(
-        ids=ids,
-        documents=chunks,
-        metadatas=metas,
-        embeddings=embeddings
-    )
+    upsert_text_chunks("textbooks", records)
     print(f"✅ {pdf_path.name} ingested with {len(chunks)} chunks.")
+
 
 # ------------------ MAIN ------------------
 
 def main():
+    # Ensure tables exist (dimension 768 confirmed from detect_dim.py)
+    create_tables_if_not_exists(768)
+
     pdf_files = list(PDF_DIR.glob("*.pdf"))
     if not pdf_files:
         print("⚠️ No PDFs found in scripts/pdfs/")
@@ -135,7 +111,8 @@ def main():
     for pdf_file in pdf_files:
         ingest_pdf(pdf_file)
 
-    print("🎉 All textbooks ingested into ChromaDB!")
+    print("🎉 All textbooks ingested into Supabase Postgres!")
+
 
 if __name__ == "__main__":
     main()

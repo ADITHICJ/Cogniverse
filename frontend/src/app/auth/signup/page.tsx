@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("teacher");
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -18,7 +17,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        data: { role }, // 👈 stored in raw_user_meta_data → trigger reads this
+        data: { role: "teacher" }, // 👈 stored in raw_user_meta_data → trigger reads this
       },
     });
 
@@ -57,16 +56,6 @@ export default function SignupPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-
-        <select
-          className="w-full p-3 mb-6 border rounded"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-        >
-          <option value="teacher">Teacher</option>
-          <option value="hod">Department Head</option>
-          <option value="admin">Admin</option>
-        </select>
 
         <button
           type="submit"
