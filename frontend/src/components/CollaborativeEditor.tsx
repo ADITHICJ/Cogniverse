@@ -271,7 +271,7 @@ export default function CollaborativeEditor({
     console.log("- Expected room ID:", roomId);
     console.log("- Room methods:", room ? Object.getOwnPropertyNames(Object.getPrototypeOf(room)) : 'none');
     if (room) {
-      console.log("- Room connection state:", (room as any).getConnectionState?.());
+      console.log("- Room status:", (room as any).getStatus?.());
       console.log("- Room self info:", (room as any).getSelf?.());
       console.log("- Room others:", (room as any).getOthers?.());
     }
@@ -298,21 +298,23 @@ export default function CollaborativeEditor({
         console.log("⏳ Room methods not available yet, will retry when room updates...");
         return;
       }
+      
+      console.log("✅ Room is properly initialized with required methods");
     
     console.log("🔗 Initializing Liveblocks provider for room:", roomId);
       console.log("🏠 Room object:", room);
       console.log("🏠 Room ID matches:", room.id === roomId);
-      console.log("🏠 Room connection state:", (room as any).getConnectionState?.());
+      console.log("🏠 Room status:", (room as any).getStatus?.());
       console.log("📄 Ydoc object:", ydoc);
       
       // Wait for room to be ready before creating provider
       const initProvider = () => {
         console.log("⏳ Checking room readiness...");
-        console.log("- Room connection status:", (room as any).getConnectionState?.());
+        console.log("- Room status:", (room as any).getStatus?.());
         
         // Check if room has users (indicating it's connected)
         const roomInfo = {
-          connectionState: (room as any).getConnectionState?.(),
+          status: (room as any).getStatus?.(),
           selfInfo: (room as any).getSelf?.(),
           othersCount: (room as any).getOthers?.().length || 0
         };
@@ -324,26 +326,7 @@ export default function CollaborativeEditor({
           return;
         }
 
-        // Check if room has required methods - if missing, wait longer
-        const roomMethods = ['getConnectionState', 'getSelf', 'getOthers'];
-        const missingMethods = roomMethods.filter(method => typeof (room as any)[method] !== 'function');
-        if (missingMethods.length > 0) {
-          console.warn("⚠️ Room missing methods:", missingMethods, "- waiting for room to initialize...");
-          // Retry after 500ms if room methods are still missing
-          setTimeout(() => {
-            console.log("🔄 Retrying room initialization...");
-            const retryMethods = roomMethods.filter(method => typeof (room as any)[method] !== 'function');
-            if (retryMethods.length === 0) {
-              console.log("✅ Room methods now available, proceeding...");
-              initProvider();
-            } else {
-              console.error("❌ Room still missing methods after retry:", retryMethods);
-              console.log("🔍 Room prototype:", Object.getPrototypeOf(room));
-              console.log("🔍 Room properties:", Object.keys(room));
-            }
-          }, 500);
-          return;
-        }
+        // Room is ready - all required methods are available
 
         // Final validation before creating provider - check if room has required methods
         const requiredMethods = ['getSelf', 'getOthers'];
@@ -479,7 +462,7 @@ export default function CollaborativeEditor({
         console.log("🔍 Connection test after 3 seconds:");
         console.log("- Provider awareness state:", yProvider.awareness?.getStates().size);
         console.log("- Document length:", ydoc.getXmlFragment('default').length);
-        console.log("- Room connection status:", (room as any)?.getConnectionState?.());
+        console.log("- Room status:", (room as any)?.getStatus?.());
         console.log("- Room ID:", room.id);
         console.log("- Provider connected:", yProvider.synced);
         console.log("- Room getSelf():", (room as any).getSelf?.());
