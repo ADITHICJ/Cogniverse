@@ -313,6 +313,15 @@ export default function CollaborativeEditor({
           console.log("📄 Document content:", fragment.toString().substring(0, 200) + "...");
           console.log("👥 Connected users:", yProvider.awareness?.getStates().size || 0);
           
+          // Set user awareness when synced
+          if (localUser && yProvider.awareness) {
+            console.log("👤 Setting user awareness on sync:", localUser.name);
+            yProvider.awareness.setLocalStateField('user', {
+              name: localUser.name,
+              color: localUser.color
+            });
+          }
+          
           // Additional debug: Check if we have initial content to set
           if (initialContent && initialContent.trim() !== "") {
             console.log("📋 Initial content available for setting:", initialContent.substring(0, 100) + "...");
@@ -433,30 +442,30 @@ export default function CollaborativeEditor({
           document: ydoc, 
           field: "default",
         }),
-        ...(provider && localUser
-          ? [
-              CollaborationCursor.configure({
-                provider: provider,
-                user: { 
-                  name: localUser.name, 
-                  color: localUser.color,
-                },
-                render: user => {
-                  const cursor = document.createElement('span');
-                  cursor.classList.add('collaboration-cursor__caret');
-                  cursor.setAttribute('style', `border-color: ${user.color}`);
-                  
-                  const label = document.createElement('div');
-                  label.classList.add('collaboration-cursor__label');
-                  label.setAttribute('style', `background-color: ${user.color}`);
-                  label.insertBefore(document.createTextNode(user.name), null);
-                  cursor.insertBefore(label, null);
-                  
-                  return cursor;
-                },
-              }),
-            ]
-          : []),
+        // Always include CollaborationCursor, but conditionally configure it
+        CollaborationCursor.configure({
+          provider: provider || undefined,
+          user: localUser ? { 
+            name: localUser.name, 
+            color: localUser.color,
+          } : {
+            name: "Anonymous",
+            color: "#6B7280"
+          },
+          render: user => {
+            const cursor = document.createElement('span');
+            cursor.classList.add('collaboration-cursor__caret');
+            cursor.setAttribute('style', `border-color: ${user.color}`);
+            
+            const label = document.createElement('div');
+            label.classList.add('collaboration-cursor__label');
+            label.setAttribute('style', `background-color: ${user.color}`);
+            label.insertBefore(document.createTextNode(user.name), null);
+            cursor.insertBefore(label, null);
+            
+            return cursor;
+          },
+        }),
         TextAlign.configure({ types: ["heading", "paragraph"] }),
         Highlight.configure({ multicolor: true }),
         Typography,
@@ -476,6 +485,12 @@ export default function CollaborativeEditor({
         console.log("📝 Editor created for user:", localUser?.name, "in room:", roomId);
         console.log("🔧 Editor extensions:", editor.extensionManager.extensions.map(ext => ext.name));
         console.log("📄 Initial editor content:", editor.getHTML());
+        console.log("🔗 Provider status at editor creation:", {
+          hasProvider: !!provider,
+          providerSynced: provider?.synced,
+          hasLocalUser: !!localUser,
+          userName: localUser?.name
+        });
         
         // Check if we need to set initial content immediately
         if (initialContent && initialContent.trim() !== "" && provider?.synced) {
@@ -683,6 +698,43 @@ export default function CollaborativeEditor({
     };
   }, [editor, room, localUser]);
 
+  // Update collaboration cursor when provider or user changes
+  useEffect(() => {
+    if (editor && provider && localUser) {
+      console.log("🎯 Updating collaboration cursor for user:", localUser.name, "with provider:", !!provider);
+      
+      // Get the CollaborationCursor extension and update it
+      const collaborationCursor = editor.extensionManager.extensions.find(
+        ext => ext.name === 'collaborationCursor'
+      );
+      
+      if (collaborationCursor) {
+        console.log("✅ CollaborationCursor extension found, updating provider and user");
+        // Update the extension's options
+        try {
+          (collaborationCursor as any).options.provider = provider;
+          (collaborationCursor as any).options.user = {
+            name: localUser.name,
+            color: localUser.color
+          };
+          
+          // Trigger awareness update
+          if (provider.awareness) {
+            provider.awareness.setLocalStateField('user', {
+              name: localUser.name,
+              color: localUser.color
+            });
+            console.log("👥 Awareness updated with user info");
+          }
+        } catch (error) {
+          console.error("❌ Error updating collaboration cursor:", error);
+        }
+      } else {
+        console.warn("⚠️ CollaborationCursor extension not found");
+      }
+    }
+  }, [editor, provider, localUser]);
+
   const handleSave = async () => {
     if (!editor) return;
     setIsSaving(true);
@@ -865,6 +917,7 @@ export default function CollaborativeEditor({
               <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">
                 Real-time collaboration
               </span>
+              
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <div
                   className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse ${
@@ -872,7 +925,7 @@ export default function CollaborativeEditor({
                   }`}
                 ></div>
                 <span className="text-gray-500 dark:text-gray-400 capitalize">
-                  {connectionStatus}
+                  {connectionStatus} {provider?.awareness?.getStates().size || 0} users
                 </span>
               </div>
             </div>
