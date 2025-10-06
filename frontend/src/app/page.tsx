@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -62,145 +63,184 @@ export default function HomePage() {
       </header>
 
       <main className="flex-grow pt-16">
-        {/* Hero Section */}
-        <section className="relative py-20 sm:py-32 flex items-center justify-center text-center">
+          {/* Mobile-Optimized Hero Section */}
+        <section className="relative py-16 sm:py-20 lg:py-32 flex items-center justify-center">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-100 via-white to-purple-100 opacity-60"></div>
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="max-w-3xl mx-auto flex flex-col gap-6">
-              <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl text-gray-900 dark:text-white">
-                AI-Powered Collaborative Lesson Plan & Content Generator
+          <div className="mobile-container relative z-10">
+            <div className="max-w-4xl mx-auto text-center">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight mb-6">
+                AI-Powered Collaborative
+                <span className="block text-blue-600 mt-2">Educational Platform</span>
               </h1>
-              <p className="max-w-xl mx-auto text-lg text-gray-700 dark:text-gray-300">
+              <p className="max-w-2xl mx-auto text-base sm:text-lg lg:text-xl text-gray-700 dark:text-gray-300 leading-relaxed mb-8">
                 Create engaging lesson plans and educational content effortlessly.
                 Collaborate in real-time and streamline your workflow with PrepSmart 🚀
               </p>
-              <div className="flex flex-wrap justify-center gap-4 mt-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
                 <a
-                  className="inline-flex items-center justify-center rounded-lg h-12 px-6 bg-blue-600 text-white text-base font-bold tracking-wide transition-transform hover:scale-105 transform"
+                  className="inline-flex items-center justify-center rounded-xl h-12 sm:h-14 px-6 sm:px-8 bg-blue-600 text-white text-base sm:text-lg font-semibold tracking-wide transition-all duration-200 hover:bg-blue-700 hover:scale-105 transform touch-manipulation shadow-lg hover:shadow-xl"
                   href="/auth/signup"
                 >
-                  Get Started
+                  Get Started Free
                 </a>
                 <a
-                  className="inline-flex items-center justify-center rounded-lg h-12 px-6 bg-blue-600/20 dark:bg-blue-600/30 text-blue-600 text-base font-bold tracking-wide transition-transform hover:scale-105 transform"
+                  className="inline-flex items-center justify-center rounded-xl h-12 sm:h-14 px-6 sm:px-8 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-base sm:text-lg font-semibold tracking-wide transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:scale-105 transform touch-manipulation border border-blue-200 dark:border-blue-800"
                   href="/auth/login"
                 >
-                  Login
+                  Sign In
                 </a>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Features Section */}
+        {/* Mobile-Optimized Features Section */}
         <section
           id="features"
-          className="py-20 sm:py-24 bg-gray-50 dark:bg-gray-900"
+          className="py-16 sm:py-20 lg:py-24 bg-gray-50 dark:bg-gray-900"
         >
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-gray-900 dark:text-white">
+          <div className="mobile-container">
+            <div className="text-center mb-12 sm:mb-16">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
                 Key Features
               </h2>
-              <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
+              <p className="max-w-2xl mx-auto text-base sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
                 PrepSmart offers a suite of powerful tools designed to enhance your
                 teaching experience.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 max-w-7xl mx-auto">
               {/* AI Lesson Plan Generator */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700 touch-manipulation hover:-translate-y-1">
                 <div className="mb-4 flex justify-center">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-50 dark:bg-blue-900/30 rounded-xl sm:rounded-2xl flex items-center justify-center">
                     <svg
-                      className="w-8 h-8 text-blue-600"
-                      fill="currentColor"
+                      className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600"
+                      fill="none"
                       viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
                   </div>
                 </div>
                 <div className="text-center">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                    AI Lesson Plan Generator
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
+                    AI Lesson Generator
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
                     Generate comprehensive lesson plans tailored to your curriculum
-                    and student needs.
+                    and student needs with AI.
                   </p>
                 </div>
               </div>
 
               {/* Real-time Collaboration */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700 touch-manipulation hover:-translate-y-1">
                 <div className="mb-4 flex justify-center">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-50 dark:bg-green-900/30 rounded-xl sm:rounded-2xl flex items-center justify-center">
                     <svg
-                      className="w-8 h-8 text-blue-600"
-                      fill="currentColor"
+                      className="w-6 h-6 sm:w-8 sm:h-8 text-green-600"
+                      fill="none"
                       viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                     </svg>
                   </div>
                 </div>
                 <div className="text-center">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
                     Real-time Collaboration
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
                     Collaborate with colleagues on lesson plans and content in
-                    real-time.
+                    real-time with live cursors.
                   </p>
                 </div>
               </div>
 
               {/* Template Library */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700 touch-manipulation hover:-translate-y-1">
                 <div className="mb-4 flex justify-center">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-50 dark:bg-purple-900/30 rounded-xl sm:rounded-2xl flex items-center justify-center">
                     <svg
-                      className="w-8 h-8 text-blue-600"
-                      fill="currentColor"
+                      className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600"
+                      fill="none"
                       viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                   </div>
                 </div>
                 <div className="text-center">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
                     Template Library
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
                     Access pre-designed templates for different subjects and grade
-                    levels.
+                    levels instantly.
                   </p>
                 </div>
               </div>
 
               {/* Approval Workflow */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-700 touch-manipulation hover:-translate-y-1">
                 <div className="mb-4 flex justify-center">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-orange-50 dark:bg-orange-900/30 rounded-xl sm:rounded-2xl flex items-center justify-center">
                     <svg
-                      className="w-8 h-8 text-blue-600"
-                      fill="currentColor"
+                      className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600"
+                      fill="none"
                       viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                 </div>
                 <div className="text-center">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
                     Approval Workflow
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                    Streamline your approval process with built-in workflow tools.
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Streamline your approval process with built-in workflow and
+                    review tools.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 sm:py-20">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="relative">
+              {/* Background decoration */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl sm:rounded-3xl opacity-10"></div>
+              <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl sm:rounded-3xl p-8 sm:p-12 text-center text-white">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-4">
+                  Ready to Transform Your Teaching?
+                </h2>
+                <p className="text-blue-100 mb-6 sm:mb-8 max-w-2xl mx-auto text-sm sm:text-base">
+                  Join thousands of educators who are already creating amazing
+                  lesson plans with PrepSmart.
+                </p>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center px-6 sm:px-8 py-3 bg-white text-blue-600 font-semibold rounded-full hover:bg-gray-100 transition-all duration-200 text-sm sm:text-base touch-manipulation hover:scale-105"
+                >
+                  Get Started Now
+                  <svg
+                    className="ml-2 w-4 h-4 sm:w-5 sm:h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
               </div>
             </div>
           </div>
