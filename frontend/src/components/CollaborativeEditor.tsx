@@ -273,20 +273,41 @@ export default function CollaborativeEditor({
         };
         console.log("🔍 Room info:", roomInfo);
         
-        let yProvider: LiveblocksYjsProvider;
-      try {
-        yProvider = new LiveblocksYjsProvider(room, ydoc);
-        console.log("🔗 Provider created successfully:", yProvider);
-        console.log("🔍 Provider methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(yProvider)));
-        console.log("🔍 Provider properties:", Object.keys(yProvider));
-        
-        // Check if provider has a connect method before calling it
-        if (typeof (yProvider as any).connect === 'function') {
-          (yProvider as any).connect();
-          console.log("🚀 Provider connection initiated via .connect()");
-        } else {
-          console.log("ℹ️ Provider does not have .connect() method, should auto-connect");
+        // Validate room object before creating provider
+        if (!room) {
+          console.error("❌ Room object is null or undefined");
+          return;
         }
+
+        // Check if room has required methods
+        const roomMethods = ['getConnectionState', 'getSelf', 'getOthers'];
+        const missingMethods = roomMethods.filter(method => typeof (room as any)[method] !== 'function');
+        if (missingMethods.length > 0) {
+          console.warn("⚠️ Room missing methods:", missingMethods);
+        }
+
+        let yProvider: LiveblocksYjsProvider;
+        try {
+          console.log("🔧 Creating LiveblocksYjsProvider with room and ydoc...");
+          yProvider = new LiveblocksYjsProvider(room, ydoc);
+          console.log("🔗 Provider created successfully:", yProvider);
+          console.log("🔍 Provider methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(yProvider)));
+          console.log("🔍 Provider properties:", Object.keys(yProvider));
+          
+          // Validate awareness property
+          if (!yProvider.awareness) {
+            console.error("❌ Provider created but awareness property is missing!");
+            return;
+          }
+          console.log("✅ Provider awareness initialized:", !!yProvider.awareness);
+        
+          // Check if provider has a connect method before calling it
+          if (typeof (yProvider as any).connect === 'function') {
+            (yProvider as any).connect();
+            console.log("🚀 Provider connection initiated via .connect()");
+          } else {
+            console.log("ℹ️ Provider does not have .connect() method, should auto-connect");
+          }
       } catch (error) {
         console.error("❌ Failed to create or connect provider:", error);
         return;
@@ -442,30 +463,32 @@ export default function CollaborativeEditor({
           document: ydoc, 
           field: "default",
         }),
-        // Always include CollaborationCursor, but conditionally configure it
-        CollaborationCursor.configure({
-          provider: provider || undefined,
-          user: localUser ? { 
-            name: localUser.name, 
-            color: localUser.color,
-          } : {
-            name: "Anonymous",
-            color: "#6B7280"
-          },
-          render: user => {
-            const cursor = document.createElement('span');
-            cursor.classList.add('collaboration-cursor__caret');
-            cursor.setAttribute('style', `border-color: ${user.color}`);
-            
-            const label = document.createElement('div');
-            label.classList.add('collaboration-cursor__label');
-            label.setAttribute('style', `background-color: ${user.color}`);
-            label.insertBefore(document.createTextNode(user.name), null);
-            cursor.insertBefore(label, null);
-            
-            return cursor;
-          },
-        }),
+        // Only include CollaborationCursor when provider is ready and has awareness
+        ...(provider && provider.awareness ? [
+          CollaborationCursor.configure({
+            provider: provider,
+            user: localUser ? { 
+              name: localUser.name, 
+              color: localUser.color,
+            } : {
+              name: "Anonymous",
+              color: "#6B7280"
+            },
+            render: user => {
+              const cursor = document.createElement('span');
+              cursor.classList.add('collaboration-cursor__caret');
+              cursor.setAttribute('style', `border-color: ${user.color}`);
+              
+              const label = document.createElement('div');
+              label.classList.add('collaboration-cursor__label');
+              label.setAttribute('style', `background-color: ${user.color}`);
+              label.insertBefore(document.createTextNode(user.name), null);
+              cursor.insertBefore(label, null);
+              
+              return cursor;
+            },
+          }),
+        ] : []),
         TextAlign.configure({ types: ["heading", "paragraph"] }),
         Highlight.configure({ multicolor: true }),
         Typography,
@@ -718,8 +741,8 @@ export default function CollaborativeEditor({
             color: localUser.color
           };
           
-          // Trigger awareness update
-          if (provider.awareness) {
+          // Trigger awareness update only if provider has awareness
+          if (provider && provider.awareness) {
             provider.awareness.setLocalStateField('user', {
               name: localUser.name,
               color: localUser.color
@@ -729,8 +752,46 @@ export default function CollaborativeEditor({
         } catch (error) {
           console.error("❌ Error updating collaboration cursor:", error);
         }
+      } else if (provider && provider.awareness) {
+        console.log("➕ CollaborationCursor extension not found, adding it dynamically");
+        try {
+          // Add the CollaborationCursor extension dynamically
+          const newCursorExtension = CollaborationCursor.configure({
+            provider: provider,
+            user: {
+              name: localUser.name,
+              color: localUser.color
+            },
+            render: user => {
+              const cursor = document.createElement('span');
+              cursor.classList.add('collaboration-cursor__caret');
+              cursor.setAttribute('style', `border-color: ${user.color}`);
+              
+              const label = document.createElement('div');
+              label.classList.add('collaboration-cursor__label');
+              label.setAttribute('style', `background-color: ${user.color}`);
+              label.insertBefore(document.createTextNode(user.name), null);
+              cursor.insertBefore(label, null);
+              
+              return cursor;
+            },
+          });
+          
+          // Use the editor's registerPlugin method to add the extension
+          editor.extensionManager.extensions.push(newCursorExtension);
+          console.log("✅ CollaborationCursor extension added dynamically");
+          
+          // Set awareness
+          provider.awareness.setLocalStateField('user', {
+            name: localUser.name,
+            color: localUser.color
+          });
+          console.log("👥 Awareness updated with user info");
+        } catch (error) {
+          console.error("❌ Error adding CollaborationCursor extension:", error);
+        }
       } else {
-        console.warn("⚠️ CollaborationCursor extension not found");
+        console.warn("⚠️ CollaborationCursor extension not found and provider not ready");
       }
     }
   }, [editor, provider, localUser]);
