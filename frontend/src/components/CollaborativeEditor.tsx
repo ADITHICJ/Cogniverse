@@ -239,8 +239,44 @@ export default function CollaborativeEditor({
     initialContentLength: initialContent?.length || 0,
     localUser: localUser?.name || "none"
   });
+
+  // Debug Liveblocks versions and state
+  useEffect(() => {
+    try {
+      console.log("🔍 Debug Liveblocks imports:");
+      console.log("- LiveblocksYjsProvider:", LiveblocksYjsProvider);
+      console.log("- LiveblocksYjsProvider constructor name:", LiveblocksYjsProvider.name);
+      console.log("- useRoom:", useRoom);
+      console.log("- Y (Yjs):", Y);
+      
+      // Check for multiple Liveblocks instances
+      console.log("🔍 Checking for multiple Liveblocks instances...");
+      if (typeof window !== 'undefined') {
+        console.log("- Window object available");
+        console.log("- Window.__LIVEBLOCKS__:", (window as any).__LIVEBLOCKS__);
+      }
+    } catch (error) {
+      console.error("❌ Error checking imports:", error);
+    }
+  }, [])
   
   const room = useRoom();
+  
+  // Debug room object
+  useEffect(() => {
+    console.log("🏠 Room debug info:");
+    console.log("- Room object:", room);
+    console.log("- Room type:", typeof room);
+    console.log("- Room ID:", room?.id);
+    console.log("- Expected room ID:", roomId);
+    console.log("- Room methods:", room ? Object.getOwnPropertyNames(Object.getPrototypeOf(room)) : 'none');
+    if (room) {
+      console.log("- Room connection state:", (room as any).getConnectionState?.());
+      console.log("- Room self info:", (room as any).getSelf?.());
+      console.log("- Room others:", (room as any).getOthers?.());
+    }
+  }, [room, roomId]);
+  
   const [ydoc] = useState(() => {
     const doc = new Y.Doc();
     console.log("📄 Created new Yjs document for room:", roomId);
@@ -289,17 +325,31 @@ export default function CollaborativeEditor({
         let yProvider: LiveblocksYjsProvider;
         try {
           console.log("🔧 Creating LiveblocksYjsProvider with room and ydoc...");
+          console.log("🔍 Room type:", typeof room);
+          console.log("🔍 Room constructor:", room.constructor.name);
+          console.log("🔍 Ydoc type:", typeof ydoc);
+          console.log("🔍 Ydoc constructor:", ydoc.constructor.name);
+          
           yProvider = new LiveblocksYjsProvider(room, ydoc);
           console.log("🔗 Provider created successfully:", yProvider);
+          console.log("🔍 Provider type:", typeof yProvider);
+          console.log("🔍 Provider constructor:", yProvider.constructor.name);
           console.log("🔍 Provider methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(yProvider)));
           console.log("🔍 Provider properties:", Object.keys(yProvider));
           
           // Validate awareness property
+          console.log("🔍 Checking for awareness property...");
+          console.log("🔍 yProvider.awareness type:", typeof yProvider.awareness);
+          console.log("🔍 yProvider.awareness value:", yProvider.awareness);
+          
           if (!yProvider.awareness) {
             console.error("❌ Provider created but awareness property is missing!");
+            console.log("🔍 All provider properties:", Object.getOwnPropertyDescriptors(yProvider));
             return;
           }
           console.log("✅ Provider awareness initialized:", !!yProvider.awareness);
+          console.log("🔍 Awareness methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(yProvider.awareness)));
+          console.log("🔍 Awareness properties:", Object.keys(yProvider.awareness));
         
           // Check if provider has a connect method before calling it
           if (typeof (yProvider as any).connect === 'function') {
@@ -453,7 +503,18 @@ export default function CollaborativeEditor({
     }
   }, [room, ydoc, provider, roomId]);
 
-  const editor = useEditor(
+  console.log("🎯 Editor initialization debug:", {
+    hasProvider: !!provider,
+    hasProviderAwareness: !!(provider && provider.awareness),
+    hasLocalUser: !!localUser,
+    hasYdoc: !!ydoc,
+    roomId
+  });
+
+  let editor: any = null;
+  try {
+    console.log("🏗️ Starting useEditor creation...");
+    editor = useEditor(
     {
       extensions: [
         StarterKit.configure({ 
@@ -464,31 +525,34 @@ export default function CollaborativeEditor({
           field: "default",
         }),
         // Only include CollaborationCursor when provider is ready and has awareness
-        ...(provider && provider.awareness ? [
-          CollaborationCursor.configure({
-            provider: provider,
-            user: localUser ? { 
-              name: localUser.name, 
-              color: localUser.color,
-            } : {
-              name: "Anonymous",
-              color: "#6B7280"
-            },
-            render: user => {
-              const cursor = document.createElement('span');
-              cursor.classList.add('collaboration-cursor__caret');
-              cursor.setAttribute('style', `border-color: ${user.color}`);
-              
-              const label = document.createElement('div');
-              label.classList.add('collaboration-cursor__label');
-              label.setAttribute('style', `background-color: ${user.color}`);
-              label.insertBefore(document.createTextNode(user.name), null);
-              cursor.insertBefore(label, null);
-              
-              return cursor;
-            },
-          }),
-        ] : []),
+        ...(provider && provider.awareness ? (() => {
+          console.log("✅ Including CollaborationCursor extension with provider:", !!provider);
+          return [
+            CollaborationCursor.configure({
+              provider: provider,
+              user: localUser ? { 
+                name: localUser.name, 
+                color: localUser.color,
+              } : {
+                name: "Anonymous",
+                color: "#6B7280"
+              },
+              render: user => {
+                const cursor = document.createElement('span');
+                cursor.classList.add('collaboration-cursor__caret');
+                cursor.setAttribute('style', `border-color: ${user.color}`);
+                
+                const label = document.createElement('div');
+                label.classList.add('collaboration-cursor__label');
+                label.setAttribute('style', `background-color: ${user.color}`);
+                label.insertBefore(document.createTextNode(user.name), null);
+                cursor.insertBefore(label, null);
+                
+                return cursor;
+              },
+            }),
+          ];
+        })() : []),
         TextAlign.configure({ types: ["heading", "paragraph"] }),
         Highlight.configure({ multicolor: true }),
         Typography,
@@ -676,6 +740,14 @@ export default function CollaborativeEditor({
       return cleanup;
     }
   }, [editor, provider, ydoc, roomId, initialContent]);
+
+  console.log("✅ useEditor completed successfully");
+  } catch (error) {
+    console.error("❌ Error during useEditor creation:", error);
+    if (error instanceof Error) {
+      console.error("❌ Error stack:", error.stack);
+    }
+  }
 
   // Listen for version-saved events from other collaborators
   useEffect(() => {
