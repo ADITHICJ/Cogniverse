@@ -354,31 +354,50 @@ export default function EditorPage() {
 
         {/* Editor Content */}
         <div className="flex-1 overflow-auto p-6">
-          <RoomProvider id={roomId} initialPresence={{ cursor: null }}>
-            <ClientSideSuspense
-              fallback={
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-8 shadow-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
-                    <div>
-                      <div className="text-lg font-semibold text-blue-900">
-                        Loading collaborative editor...
-                      </div>
-                      <div className="text-sm text-blue-700 mt-1">
-                        Connecting to room: {roomId}
+          {localUser ? (
+            <RoomProvider 
+              id={roomId} 
+              initialPresence={{ cursor: null, user: localUser }}
+            >
+              <ClientSideSuspense
+                fallback={
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-8 shadow-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+                      <div>
+                        <div className="text-lg font-semibold text-blue-900">
+                          Loading collaborative editor...
+                        </div>
+                        <div className="text-sm text-blue-700 mt-1">
+                          Connecting to room: {roomId}
+                        </div>
                       </div>
                     </div>
                   </div>
+                }
+              >
+                <CollaborativeEditor
+                  roomId={roomId}
+                  initialContent={draft.content}
+                  localUser={localUser}
+                />
+              </ClientSideSuspense>
+            </RoomProvider>
+          ) : (
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-8 shadow-lg">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 border-4 border-yellow-300 border-t-yellow-600 rounded-full animate-spin"></div>
+                <div>
+                  <div className="text-lg font-semibold text-yellow-900">
+                    Authenticating user...
+                  </div>
+                  <div className="text-sm text-yellow-700 mt-1">
+                    Please wait while we set up your collaboration session
+                  </div>
                 </div>
-              }
-            >
-              <CollaborativeEditor
-                roomId={roomId}
-                initialContent={draft.content}
-                localUser={localUser}
-              />
-            </ClientSideSuspense>
-          </RoomProvider>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

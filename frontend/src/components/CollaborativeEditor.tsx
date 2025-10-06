@@ -241,6 +241,7 @@ export default function CollaborativeEditor({
     roomId,
     hasInitialContent: !!initialContent,
     initialContentLength: initialContent?.length || 0,
+    initialContentPreview: initialContent?.substring(0, 100),
     localUser: localUser?.name || "none"
   });
   
@@ -253,43 +254,75 @@ export default function CollaborativeEditor({
   const [provider, setProvider] = useState<LiveblocksYjsProvider | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>("connecting");
+  const [debugInfo, setDebugInfo] = useState<any>({});
   const initContentRef = useRef<string | undefined>(undefined);
 
   // Initialize provider first
-  // ✅ Initialize Liveblocks provider safely once room is ready
-useEffect(() => {
-  if (!room || !ydoc || provider) return;
-
-  // Wait until the room has a working client before creating provider
-  const checkRoomReady = () => {
-    try {
-      const state = (room as any)?.getConnectionState?.();
-      const hasClient = !!(room as any)?.client; // internal property used by Liveblocks
-
-      console.log("🧩 Checking room readiness:", { state, hasClient, roomId });
-
-      if (hasClient && state === "open") {
-        console.log("✅ Room is ready, creating Yjs provider...");
-        const yProvider = new LiveblocksYjsProvider(room, ydoc);
-
-        // ✅ Track provider status
-        yProvider.on("status", ({ status }: { status: string }) => {
-          console.log("📡 Provider status:", status);
-        });
-
-        setProvider(yProvider);
-      } else {
-        console.log("⏳ Room not ready yet, retrying in 500ms...");
-        setTimeout(checkRoomReady, 500);
+  useEffect(() => {
+    if (room && ydoc && !provider) {
+      console.log("🔗 Initializing Liveblocks provider for room:", roomId);
+      console.log("🏠 Room object:", room);
+      console.log("🏠 Room ID matches:", room.id === roomId);
+      
+      let yProvider: LiveblocksYjsProvider;
+      try {
+        yProvider = new LiveblocksYjsProvider(room, ydoc);
+        console.log("🔗 Provider created successfully");
+      } catch (error) {
+        console.error("❌ Failed to create provider:", error);
+        return;
       }
-    } catch (err) {
-      console.error("❌ Room readiness check failed:", err);
+      
+      yProvider.on('status', ({ status }: { status: string }) => {
+        console.log("📡 Provider status changed:", status);
+        setConnectionStatus(status);
+        
+        if (status === 'connected') {
+          console.log("✅ Successfully connected to Liveblocks room:", roomId);
+        }
+      });
+      
+      yProvider.on('sync', (synced: boolean) => {
+        console.log("🔄 Provider sync event:", synced, "- User:", localUser?.name);
+        if (synced) {
+          setConnectionStatus("connected");
+          const fragment = ydoc.getXmlFragment('default');
+          console.log("📄 Document fragment after sync - length:", fragment.length);
+          console.log("👥 Connected users:", yProvider.awareness?.getStates().size || 0);
+          
+          setDebugInfo((prev: any) => ({
+            ...prev,
+            synced: true,
+            fragmentLength: fragment.length,
+            connectedUsers: yProvider.awareness?.getStates().size || 0,
+            lastSyncTime: new Date().toISOString()
+          }));
+        }
+      });
+
+      yProvider.on('awareness-change', () => {
+        const states = yProvider.awareness?.getStates() || new Map();
+        console.log("👀 Awareness changed - connected users:", states.size);
+      });
+      
+      setProvider(yProvider);
+      setConnectionStatus("connecting");
+      
+      // Test Yjs document changes
+      ydoc.on('update', (update: Uint8Array, origin: any) => {
+        console.log("📄 Yjs document updated:", {
+          updateSize: update.length,
+          origin: origin?.constructor?.name || origin,
+          user: localUser?.name || "unknown"
+        });
+      });
+
+      return () => {
+        console.log("🔌 Destroying provider for room:", roomId);
+        yProvider.destroy();
+      };
     }
-  };
-
-  checkRoomReady();
-}, [room, ydoc, provider, roomId]);
-
+  }, [room, ydoc, provider, roomId, localUser?.name]);
 
   const editor = useEditor(
     {
@@ -367,46 +400,52 @@ useEffect(() => {
         }
       },
     },
-    [ydoc, provider, localUser?.id] // Only depend on user ID to prevent unnecessary recreation
+    [ydoc, provider, localUser?.id, roomId] // Add roomId to dependencies
   );
 
   useEffect(() => {
     if (editor && provider && ydoc && initialContent && initialContent.trim() !== "") {
       console.log("⏱️ Setting up initial content sync...");
       
-      // Use a more specific key to track initialization per room and content
-      const contentKey = `${roomId}:${initialContent.slice(0, 50)}`;
+      // Use room-specific key to track initialization
+      const contentKey = roomId;
       
-      // Only initialize if we haven't already done so with this specific content in this room
+      // Only initialize if we haven't already done so for this room
       if (initContentRef.current === contentKey) {
-        console.log("📄 Content already initialized for this room and content");
+        console.log("📄 Content already initialized for this room");
         return;
       }
       
       const handleSync = () => {
+        // Check if already initialized for this room
+        if (initContentRef.current === contentKey) {
+          return;
+        }
+
         const fragment = ydoc.getXmlFragment("default");
         console.log("📄 Document sync - fragment length:", fragment.length, "for room:", roomId);
         
-        // Check if document is truly empty (no content)
-        if (fragment.length === 0 || fragment.toString().trim() === "") {
-          console.log("📝 Setting initial content for empty document:", initialContent!.substring(0, 100) + "...");
+        // Check if document is truly empty (no content or just whitespace)
+        const currentContent = fragment.toString().trim();
+        const editorContent = editor.getHTML().replace(/<\/?[^>]+(>|$)/g, "").trim(); // Strip HTML tags
+        
+        if (fragment.length === 0 || currentContent === "" || editorContent === "") {
+          console.log("📝 Setting initial content for empty document");
           
-          // Mark this specific content as initialized for this room
+          // Mark this room as initialized
           initContentRef.current = contentKey;
           
-          // Use a transaction to prevent conflicts and ensure atomic update
-          ydoc.transact(() => {
-            const htmlContent = marked(initialContent!);
-            // Clear editor first to prevent duplication
-            editor.commands.clearContent(false); // false = don't add to history
-            // Then set the content
+          // Convert markdown to HTML and set content
+          try {
+            const htmlContent = marked(initialContent);
             editor.commands.setContent(htmlContent, false); // false = don't add to history
-          });
-          
-          console.log("✅ Initial content set for room:", roomId);
+            console.log("✅ Initial content set for room:", roomId);
+          } catch (error) {
+            console.error("❌ Error setting initial content:", error);
+          }
         } else {
-          console.log("📄 Document already has content, skipping initial content. Current length:", fragment.length);
-          // Mark as initialized even if we don't set content to prevent future attempts
+          console.log("📄 Document already has content, skipping initial content");
+          // Mark as initialized even if we don't set content
           initContentRef.current = contentKey;
         }
       };
@@ -418,17 +457,18 @@ useEffect(() => {
       if (provider.synced) {
         console.log("🔄 Provider already synced, running handleSync immediately");
         handleSync();
-      } else {
-        // Try after a delay to ensure provider is ready
-        setTimeout(() => {
-          if (!initContentRef.current || initContentRef.current !== contentKey) {
-            handleSync();
-          }
-        }, 1000);
       }
+      
+      // Also try after a short delay to ensure everything is ready
+      const timeoutId = setTimeout(() => {
+        if (initContentRef.current !== contentKey) {
+          handleSync();
+        }
+      }, 500);
 
       return () => {
         provider.off('sync', handleSync);
+        clearTimeout(timeoutId);
       };
     }
   }, [editor, provider, ydoc, roomId, initialContent]);
@@ -598,13 +638,41 @@ useEffect(() => {
           {editor.storage.characterCount?.characters() || 0} characters •{" "}
           {editor.storage.characterCount?.words() || 0} words
         </div>
-        <div className="flex items-center gap-2">
-          <span>Real-time collaboration enabled</span>
-          <div
-            className={`w-2 h-2 rounded-full animate-pulse ${
-              provider ? "bg-green-500" : "bg-yellow-500"
-            }`}
-          ></div>
+        <div className="flex items-center gap-4">
+          <span>Connection: {connectionStatus}</span>
+          <div className="flex items-center gap-1">
+            <span>Room: {roomId.replace('draft-', '')}</span>
+            <div
+              className={`w-2 h-2 rounded-full ${
+                connectionStatus === 'connected' 
+                  ? "bg-green-500" 
+                  : connectionStatus === 'connecting'
+                  ? "bg-yellow-500 animate-pulse"
+                  : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+        </div>
+        
+        {/* Debug Panel - Remove in production */}
+        <div className="bg-gray-100 px-4 py-2 border-t text-xs">
+          <details>
+            <summary className="cursor-pointer font-semibold">Debug Info</summary>
+            <div className="mt-2 space-y-1">
+              <div>Room ID: {roomId}</div>
+              <div>Provider: {provider ? '✅' : '❌'}</div>
+              <div>Editor: {editor ? '✅' : '❌'}</div>
+              <div>Local User: {localUser?.name || 'none'}</div>
+              <div>Connection Status: {connectionStatus}</div>
+              <div>Has Initial Content: {!!initialContent}</div>
+              <div>Initial Content Length: {initialContent?.length || 0}</div>
+              <div>Synced: {debugInfo.synced ? '✅' : '❌'}</div>
+              <div>Fragment Length: {debugInfo.fragmentLength || 0}</div>
+              <div>Connected Users: {debugInfo.connectedUsers || 0}</div>
+              <div>Last Sync: {debugInfo.lastSyncTime || 'never'}</div>
+              <div>Init Content Ref: {initContentRef.current || 'none'}</div>
+            </div>
+          </details>
         </div>
       </div>
     </div>
