@@ -2,12 +2,12 @@ import os
 import re
 from typing import List, Optional
 from dotenv import load_dotenv
+from supabase import create_client
 
 # === Load env ===
 load_dotenv()
 
 # ---------- Clean output ----------
-import re
 from markdownify import markdownify as md
 
 def clean_text_output(text: str) -> str:
@@ -21,18 +21,25 @@ def clean_text_output(text: str) -> str:
 
     # Convert HTML → Markdown if it looks like HTML
     if "<p>" in text or "<div>" in text or "<ul>" in text or "<h" in text:
-        text = md(text, heading_style="ATX")  # convert to # Headings, - lists
+        text = md(text, heading_style="ATX")
 
     # Normalize spacing
     text = re.sub(r"\n{3,}", "\n\n", text)
-
-
     return text.strip()
 
 # ---------- ENV CONFIG ----------
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 GEN_MODEL = os.getenv("GEMINI_GENERATION_MODEL", "gemini-2.5-flash")
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "3"))
+
+# ---------- Supabase Client (via HTTPS) ----------
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+    raise RuntimeError("❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment")
+
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 # ---------- Google GenAI Client ----------
 try:
@@ -43,10 +50,6 @@ try:
 except ImportError:
     GENAI_AVAILABLE = False
     print("[WARNING] Google GenerativeAI not available - RAG features disabled")
-
-# ---------- Import Supabase Vector Helpers ----------
-from src.supabase_vector import retrieve_top_k_by_embedding
-
 
 # ---------- Embeddings ----------
 def embed_texts(texts: List[str]) -> List[List[float]]:
@@ -70,52 +73,45 @@ def embed_texts(texts: List[str]) -> List[List[float]]:
             vectors.append([0.0] * 768)  # fallback dummy vector
     return vectors
 
-
 # ---------- Retriever ----------
-def retrieve_top_k(prompt: str, collection_name: str, user_id: Optional[str] = None, k: int = RAG_TOP_K) -> List[dict]:
-    """Retrieve documents from vector tables. Supports system + user templates."""
-    prompt_embedding = embed_texts([prompt])[0]
-
-    results = []
-    if collection_name == "templates":
-        # system templates
-        results += retrieve_top_k_by_embedding("templates", prompt_embedding, k=k)
-
-        # user templates
-        if user_id:
-            user_results = retrieve_top_k_by_embedding("user_templates_vector", prompt_embedding, k=k)
-            user_results = [r for r in user_results if str(r["metadata"].get("user_id")) == str(user_id)]
-            results += user_results
-
-    elif collection_name == "textbooks":
-        results += retrieve_top_k_by_embedding("textbooks", prompt_embedding, k=k)
-
-    results = sorted(results, key=lambda x: x.get("distance", 9999))
-    return results[:k]
-
+def retrieve_top_k(prompt: str, table_name: str, k: int = RAG_TOP_K) -> List[dict]:
+    """
+    Retrieve related context documents from Supabase.
+    This version uses REST API calls — NOT direct Postgres connections.
+    """
+    try:
+        response = supabase.table(table_name).select("content").limit(k).execute()
+        if not response.data:
+            print(f"[INFO] No context found in {table_name}")
+            return []
+        return [{"document": r["content"], "distance": 0.5} for r in response.data]
+    except Exception as e:
+        print(f"[ERROR] Retrieval from {table_name} failed: {e}")
+        return []
 
 # ---------- Generator (RAG) ----------
 def generate_with_rag(
     prompt: str,
-    grade: str = None,
+    grade: Optional[str] = None,
     user_id: Optional[str] = None,
     selected_template: Optional[str] = None,
     additional_ctx: str = "",
     temperature: float = 0.3,
 ) -> str:
-    """RAG-powered generation with Gemini + system/user templates."""
+    """RAG-powered generation with Gemini + Supabase context."""
     if not GENAI_AVAILABLE:
         raise RuntimeError("Google GenerativeAI not available")
 
-    # --- Detect grade & subject ---
     prompt_lower = prompt.lower()
-    grade = grade or None
+
+    # --- Detect grade ---
     if grade is None:
         for g in ["6", "7", "8", "9", "10", "11", "12"]:
             if f"grade {g}" in prompt_lower or f"class {g}" in prompt_lower:
                 grade = g
                 break
 
+    # --- Detect subject ---
     subject = None
     for subj in ["science", "math", "english", "history", "geography", "civics", "computer science"]:
         if subj in prompt_lower:
@@ -124,28 +120,17 @@ def generate_with_rag(
 
     topic = prompt
 
-    # --- Query Supabase (textbooks) ---
-    tb_docs = retrieve_top_k(prompt, "textbooks", k=3)
+    # --- Retrieve context from Supabase tables ---
+    tb_docs = retrieve_top_k("textbooks", k=3)
+    tmpl_docs = retrieve_top_k("templates", k=3)
 
-    # --- Templates logic ---
-    tmpl_docs = []
-    if selected_template:
-        tmpl_results = retrieve_top_k(prompt, "templates", user_id=user_id, k=10)
-        tmpl_docs = [d for d in tmpl_results if str(d["id"]) == str(selected_template)]
-    else:
-        tmpl_docs = retrieve_top_k(prompt, "templates", user_id=None, k=1)
-
-    # --- Build context ---
     relevant_context_parts = []
 
-    subject_keywords = ["math", "science", "biology", "chemistry", "physics", "history", "geography", "algebra", "geometry", "literature"]
-    prompt_mentions_subject = any(keyword in prompt_lower for keyword in subject_keywords)
-
-    if tb_docs and prompt_mentions_subject:
+    if tb_docs:
         relevant_context_parts.append("📘 Textbook Knowledge:\n" + "\n\n".join([d["document"] for d in tb_docs]))
 
     if tmpl_docs:
-        relevant_context_parts.append("📑 Templates (system + user):\n" + "\n\n".join([d["document"] for d in tmpl_docs]))
+        relevant_context_parts.append("📑 Templates:\n" + "\n\n".join([d["document"] for d in tmpl_docs]))
 
     if additional_ctx:
         relevant_context_parts.append("💡 Extra Context:\n" + additional_ctx)
@@ -156,7 +141,7 @@ def generate_with_rag(
     system_prompt = f"""
 You are PrepSmart, an AI teaching content assistant.
 
-At the beginning of your response, ALWAYS include this header (with one blank line between each line):
+At the beginning of your response, ALWAYS include this header:
 
 Grade Level: {grade or "not specified"}  
 Subject: {subject or "general"}  
@@ -165,7 +150,7 @@ Total Time Required: (estimate in minutes)
 
 ---
 
-Then continue by filling the provided template or generating structured content.
+Then generate structured, lesson-ready content using the provided context.
 """
 
     full_prompt = f"{system_prompt}\n\nContext:\n{context}\n\nUser request:\n{prompt}"
@@ -194,5 +179,5 @@ Then continue by filling the provided template or generating structured content.
         return clean_text_output(text_out) if text_out else "No content generated"
 
     except Exception as e:
-        print(f"[ERROR] Generation failed: {e}")
+        print(f"❌ Error in /generate: {str(e)}")
         return f"Error generating content: {str(e)}"
