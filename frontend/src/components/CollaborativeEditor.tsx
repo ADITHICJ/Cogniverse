@@ -256,171 +256,40 @@ export default function CollaborativeEditor({
   const initContentRef = useRef<string | undefined>(undefined);
 
   // Initialize provider first
-  useEffect(() => {
-    if (room && ydoc && !provider) {
-      console.log("🔗 Initializing Liveblocks provider for room:", roomId);
-      console.log("🏠 Room object:", room);
-      console.log("🏠 Room ID matches:", room.id === roomId);
-      console.log("🏠 Room connection state:", (room as any).getConnectionState?.());
-      console.log("📄 Ydoc object:", ydoc);
-      
-      // Wait for room to be ready before creating provider
-      const initProvider = () => {
-        console.log("⏳ Checking room readiness...");
-        console.log("- Room connection status:", (room as any).getConnectionState?.());
-        
-        // Check if room has users (indicating it's connected)
-        const roomInfo = {
-          connectionState: (room as any).getConnectionState?.(),
-          selfInfo: (room as any).getSelf?.(),
-          othersCount: (room as any).getOthers?.().length || 0
-        };
-        console.log("🔍 Room info:", roomInfo);
-        
-        let yProvider: LiveblocksYjsProvider;
-      try {
-        yProvider = new LiveblocksYjsProvider(room, ydoc);
-        console.log("🔗 Provider created successfully:", yProvider);
-        console.log("🔍 Provider methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(yProvider)));
-        console.log("🔍 Provider properties:", Object.keys(yProvider));
-        
-        // Check if provider has a connect method before calling it
-        if (typeof (yProvider as any).connect === 'function') {
-          (yProvider as any).connect();
-          console.log("🚀 Provider connection initiated via .connect()");
-        } else {
-          console.log("ℹ️ Provider does not have .connect() method, should auto-connect");
-        }
-      } catch (error) {
-        console.error("❌ Failed to create or connect provider:", error);
-        return;
+  // ✅ Initialize Liveblocks provider safely once room is ready
+useEffect(() => {
+  if (!room || !ydoc || provider) return;
+
+  // Wait until the room has a working client before creating provider
+  const checkRoomReady = () => {
+    try {
+      const state = (room as any)?.getConnectionState?.();
+      const hasClient = !!(room as any)?.client; // internal property used by Liveblocks
+
+      console.log("🧩 Checking room readiness:", { state, hasClient, roomId });
+
+      if (hasClient && state === "open") {
+        console.log("✅ Room is ready, creating Yjs provider...");
+        const yProvider = new LiveblocksYjsProvider(room, ydoc);
+
+        // ✅ Track provider status
+        yProvider.on("status", ({ status }: { status: string }) => {
+          console.log("📡 Provider status:", status);
+        });
+
+        setProvider(yProvider);
+      } else {
+        console.log("⏳ Room not ready yet, retrying in 500ms...");
+        setTimeout(checkRoomReady, 500);
       }
-      
-      yProvider.on('status', ({ status }: { status: string }) => {
-        console.log("📡 Provider status changed:", status);
-        setConnectionStatus(status);
-        
-        if (status === 'connected') {
-          console.log("✅ Successfully connected to Liveblocks room:", roomId);
-        } else if (status === 'disconnected') {
-          console.log("⚠️ Provider disconnected, attempting reconnect...");
-          setTimeout(() => yProvider.connect(), 1000);
-        }
-      });
-      
-      yProvider.on('sync', (synced: boolean) => {
-        console.log("🔄 Provider sync event:", synced, "- User:", localUser?.name);
-        if (synced) {
-          setConnectionStatus("connected");
-          const fragment = ydoc.getXmlFragment('default');
-          console.log("📄 Document fragment after sync - length:", fragment.length);
-          console.log("📄 Document content:", fragment.toString().substring(0, 200) + "...");
-          console.log("👥 Connected users:", yProvider.awareness?.getStates().size || 0);
-        }
-      });
-
-      yProvider.on('awareness-change', () => {
-        const states = yProvider.awareness?.getStates() || new Map();
-        console.log("👀 Awareness changed - connected users:", states.size);
-        states.forEach((state: any, clientId) => {
-          console.log(`👤 User ${clientId}:`, state?.user?.name || "unknown");
-        });
-      });
-
-      yProvider.on('connection-lost', () => {
-        console.log("❌ Connection lost to room:", roomId);
-        setConnectionStatus("disconnected");
-      });
-
-      yProvider.on('connection-error', (error: any) => {
-        console.error("❌ Connection error:", error);
-        setConnectionStatus("error");
-      });
-      
-      setProvider(yProvider);
-      setConnectionStatus("connecting");
-      
-      // Test Yjs document changes
-      ydoc.on('update', (update: Uint8Array, origin: any) => {
-        console.log("📄 Yjs document updated:", {
-          updateSize: update.length,
-          origin: origin?.constructor?.name || origin,
-          user: localUser?.name || "unknown"
-        });
-      });
-
-      // Test connection after a delay
-      setTimeout(() => {
-        console.log("🔍 Connection test after 3 seconds:");
-        console.log("- Provider awareness state:", yProvider.awareness?.getStates().size);
-        console.log("- Document length:", ydoc.getXmlFragment('default').length);
-        console.log("- Room connection status:", (room as any)?.getConnectionState?.());
-        console.log("- Room ID:", room.id);
-        console.log("- Provider connected:", yProvider.synced);
-        console.log("- Room getSelf():", (room as any).getSelf?.());
-        console.log("- Room getOthers():", (room as any).getOthers?.().length);
-      }, 3000);
-
-      // Test room connectivity first
-      console.log("🔍 Immediate connection test:");
-      console.log("- Room object methods:", Object.getOwnPropertyNames(room));
-      console.log("- Provider constructor:", yProvider.constructor.name);
-      
-        // Test if room is working by subscribing to presence
-        try {
-          const unsubscribe = room.subscribe("my-presence", () => {
-            console.log("👋 Room presence update detected");
-          });
-          
-          // Set presence to test room connectivity
-          room.updatePresence({ 
-            cursor: null,
-            user: localUser 
-          });
-          console.log("📡 Set room presence for:", localUser?.name);
-          
-          // Also try subscribing to others to see if we can detect other users
-          const unsubscribeOthers = room.subscribe("others", (others: any) => {
-            console.log("👥 Others in room:", others.length);
-            others.forEach((other: any, index: number) => {
-              console.log(`👤 Other user ${index}:`, other.presence?.user?.name || "unknown");
-            });
-          });
-          
-          // Clean up after test
-          setTimeout(() => {
-            unsubscribe();
-            unsubscribeOthers();
-          }, 5000);
-        } catch (error) {
-          console.error("❌ Room presence test failed:", error);
-        }
-
-      // Force connection attempt after short delay
-      setTimeout(() => {
-        console.log("🚀 Attempting manual provider connection...");
-        try {
-          // Check if provider has connection methods
-          console.log("- Provider methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(yProvider)));
-          if (typeof (yProvider as any).connect === 'function') {
-            (yProvider as any).connect();
-            console.log("✅ Called provider.connect()");
-          }
-        } catch (error) {
-          console.error("❌ Error connecting provider:", error);
-        }
-      }, 1000);
-
-        return () => {
-          console.log("🔌 Destroying provider for room:", roomId);
-          yProvider.destroy();
-        };
-      };
-      
-      // Initialize provider with delay to ensure room is ready
-      setTimeout(initProvider, 100);
+    } catch (err) {
+      console.error("❌ Room readiness check failed:", err);
     }
-  }, [room, ydoc, provider, roomId]);
+  };
+
+  checkRoomReady();
+}, [room, ydoc, provider, roomId]);
+
 
   const editor = useEditor(
     {
