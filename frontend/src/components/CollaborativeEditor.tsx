@@ -827,7 +827,7 @@ export default function CollaborativeEditor({
       
       // Get the CollaborationCursor extension and update it
       const collaborationCursor = editor.extensionManager.extensions.find(
-        ext => ext.name === 'collaborationCursor'
+        (ext: any) => ext.name === 'collaborationCursor'
       );
       
       if (collaborationCursor) {
