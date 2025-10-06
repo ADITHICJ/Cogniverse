@@ -26,6 +26,7 @@ export default function EditorPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
 
   const fetchDraft = async () => {
     const { data, error } = await supabase
@@ -189,10 +190,10 @@ export default function EditorPage() {
       <NotificationToast />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
-        <header className="bg-white">
-  <div className="px-6 py-4">
+        <header className="bg-white border-b border-gray-200">
+  <div className="px-3 sm:px-6 py-4">
     {/* Title */}
     <div>
       <div className="flex items-center gap-3 flex-1">
@@ -272,19 +273,41 @@ export default function EditorPage() {
       </div>
 
       {/* Action buttons section */}
-      <div className="flex justify-end gap-3 mt-4">
-        {/* Show collaborators dropdown for all users */}
-        <CollaboratorsDropdown 
-          draftId={draft.id} 
-          currentUserId={currentUserId}
-          ownerId={ownerId}
-        />
-
-        {/* Save button - available to all users */}
+      <div className="flex justify-between items-center gap-3 mt-4">
+        {/* Version History Toggle - Mobile Only */}
         <button
+          onClick={() => setIsVersionHistoryOpen(!isVersionHistoryOpen)}
+          className="lg:hidden px-3 sm:px-4 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white font-medium rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all duration-200 flex items-center gap-2 text-sm sm:text-base"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          History
+        </button>
+
+        <div className="flex gap-3">
+          {/* Show collaborators dropdown for all users */}
+          <CollaboratorsDropdown 
+            draftId={draft.id} 
+            currentUserId={currentUserId}
+            ownerId={ownerId}
+          />
+
+          {/* Save button - available to all users */}
+          <button
           onClick={handleSave}
           disabled={isSaving}
-          className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 transition-all duration-200"
+          className="px-3 sm:px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 transition-all duration-200 text-sm sm:text-base"
         >
           <svg
             className="w-4 h-4 inline-block mr-1"
@@ -307,7 +330,7 @@ export default function EditorPage() {
           <>
             <button
               onClick={() => setShowModal(true)}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
+              className="px-3 sm:px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm sm:text-base"
             >
               <svg
                 className="w-4 h-4 inline-block mr-1"
@@ -327,7 +350,7 @@ export default function EditorPage() {
 
             <button
               onClick={() => setShowSubmission(true)}
-              className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200"
+              className="px-3 sm:px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm sm:text-base"
             >
               <svg
                 className="w-4 h-4 inline-block mr-1"
@@ -346,6 +369,7 @@ export default function EditorPage() {
             </button>
           </>
         )}
+        </div>
       </div>
     </div>
   </div>
@@ -353,7 +377,7 @@ export default function EditorPage() {
 
 
         {/* Editor Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-3 sm:p-6">
           {localUser ? (
             <RoomProvider 
               id={roomId} 
@@ -402,10 +426,39 @@ export default function EditorPage() {
       </div>
 
       {/* Right Sidebar - Version History */}
-     {/* Right Sidebar - Version History */}
-<div className="w-80 border-l border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
-  <HistorySidebar draftId={draft.id} />
-</div>
+      {/* Desktop: Always visible */}
+      <div className="hidden lg:block w-80 border-l border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+        <HistorySidebar draftId={draft.id} />
+      </div>
+
+      {/* Mobile: Overlay when toggled */}
+      {isVersionHistoryOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div 
+            className="flex-1 bg-black/50 backdrop-blur-sm touch-manipulation"
+            onClick={() => setIsVersionHistoryOpen(false)}
+          />
+          {/* Sidebar */}
+          <div className="w-80 max-w-[85vw] bg-white border-l border-gray-200 shadow-2xl flex flex-col">
+            {/* Close button */}
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <h3 className="font-semibold text-gray-900">Version History</h3>
+              <button
+                onClick={() => setIsVersionHistoryOpen(false)}
+                className="p-2 rounded-lg hover:bg-gray-200 transition-colors touch-manipulation"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto overscroll-contain">
+              <HistorySidebar draftId={draft.id} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {showModal && currentUserId === ownerId && (

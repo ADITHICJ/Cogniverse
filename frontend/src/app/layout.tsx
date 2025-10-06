@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from 'next';
 import PWAInstaller from '@/components/PWAInstaller';
+import LiveblocksClientProvider from '@/components/LiveblocksClientProvider';
 
 export const metadata: Metadata = {
   title: "PrepSmart",
@@ -55,7 +56,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-gray-50 text-gray-900 safe-area-top safe-area-bottom">
         <PWAInstaller />
-        {children}
+        <LiveblocksClientProvider>
+          {children}
+        </LiveblocksClientProvider>
       </body>
     </html>
   );
