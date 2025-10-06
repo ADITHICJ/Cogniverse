@@ -1,5 +1,6 @@
-import os
+import os 
 import re
+import signal
 from typing import List, Optional
 from dotenv import load_dotenv
 from markdownify import markdownify as md
@@ -119,6 +120,13 @@ def fallback_generate_with_supabase(prompt: str):
         return f"Error generating content: {str(e)}"
 
 
+# ---------- Timeout Helper ----------
+class TimeoutException(Exception):
+    pass
+
+def handler(signum, frame):
+    raise TimeoutException("⏱ Gemini generation took too long (timeout).")
+
 # ---------- Main Generator (RAG + Gemini) ----------
 def generate_with_rag(
     prompt: str,
@@ -128,7 +136,7 @@ def generate_with_rag(
     additional_ctx: str = "",
     temperature: float = 0.3,
 ) -> str:
-    """RAG-powered generation with Gemini + Supabase retrieval."""
+    """RAG-powered generation with Gemini + Supabase retrieval (with timeout)."""
     if not GENAI_AVAILABLE:
         print("[INFO] Gemini not available, using fallback generator.")
         return fallback_generate_with_supabase(prompt)
@@ -199,6 +207,10 @@ Then continue by filling the provided template or generating structured content.
 
     full_prompt = f"{system_prompt}\n\nContext:\n{context}\n\nUser request:\n{prompt}"
 
+    # --- Timeout Wrapper for Gemini ---
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(40)  # ⏱ Limit Gemini to 40 seconds
+
     try:
         response = gemini_model.generate_content(
             full_prompt,
@@ -209,6 +221,8 @@ Then continue by filling the provided template or generating structured content.
                 "top_k": 40,
             },
         )
+
+        signal.alarm(0)  # clear timeout
 
         text_out = getattr(response, "text", None)
         if not text_out and hasattr(response, "candidates"):
@@ -222,6 +236,13 @@ Then continue by filling the provided template or generating structured content.
 
         return clean_text_output(text_out) if text_out else "No content generated"
 
+    except TimeoutException as e:
+        print(f"⚠️ {str(e)} — falling back to Supabase generator.")
+        return fallback_generate_with_supabase(prompt)
+
     except Exception as e:
         print(f"[ERROR] Generation failed: {e}")
         return f"Error generating content: {str(e)}"
+
+    finally:
+        signal.alarm(0)  # make sure alarm is cleared
