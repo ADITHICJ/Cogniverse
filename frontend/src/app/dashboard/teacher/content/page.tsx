@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { supabase } from "@/utils/supabaseClient";
 import { useRouter } from "next/navigation";
 import TopBar from "@/components/Topbar";
-import { showNotification, notifications } from "@/utils/notifications";
+import { showNotification } from "@/utils/notifications";
 import NotificationToast from "@/components/NotificationToast";
 
 export default function ContentGeneratorPage() {
@@ -27,7 +27,7 @@ export default function ContentGeneratorPage() {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from("user_templates") // ✅ pull only from user_templates
+        .from("user_templates")
         .select("id, title, content")
         .eq("user_id", user.id);
 
@@ -36,11 +36,11 @@ export default function ContentGeneratorPage() {
       } else {
         setTemplates(data || []);
 
-        // ✅ Auto-select if coming from "Use Template"
+        // ✅ Auto-select template if coming from “Use Template”
         const storedTemplateId = localStorage.getItem("selectedTemplateId");
         if (storedTemplateId && data?.some((t) => t.id === storedTemplateId)) {
           setSelectedTemplate(storedTemplateId);
-          localStorage.removeItem("selectedTemplateId"); // clear after use
+          localStorage.removeItem("selectedTemplateId");
         }
       }
     };
@@ -48,13 +48,20 @@ export default function ContentGeneratorPage() {
     fetchTemplates();
   }, []);
 
+  // ✅ Generate content using backend
   const handleGenerate = async () => {
     setLoading(true);
     setResult("");
 
     try {
-      const backendUrl =
-        process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+      if (!backendUrl) {
+        console.error("❌ Missing NEXT_PUBLIC_BACKEND_URL in environment");
+        setResult("⚠️ Backend URL not configured. Please check deployment settings.");
+        setLoading(false);
+        return;
+      }
 
       const res = await fetch(`${backendUrl}/generate`, {
         method: "POST",
@@ -74,15 +81,16 @@ export default function ContentGeneratorPage() {
       const data = await res.json();
       setResult(data.content);
     } catch (err) {
-      console.error("Generation error:", err);
+      console.error("❌ Generation error:", err);
       setResult(
-        "⚠️ Error generating content. Make sure the backend server is running on http://localhost:8000"
+        "⚠️ Error generating content. Please check your connection or try again later."
       );
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Save draft
   const handleSaveDraft = async () => {
     if (!result) return;
 
@@ -108,22 +116,17 @@ export default function ContentGeneratorPage() {
 
       const data = await res.json();
       if (data.success) {
-        showNotification(
-          "Draft saved successfully! You can find it in My Drafts.",
-          "success"
-        );
+        showNotification("Draft saved successfully!", "success");
       } else {
         showNotification("Failed to save draft. Please try again.", "error");
       }
     } catch (err) {
-      console.error("Save draft error:", err);
-      showNotification(
-        "Error saving draft. Please check your connection and try again.",
-        "error"
-      );
+      console.error("❌ Save draft error:", err);
+      showNotification("Error saving draft. Please try again.", "error");
     }
   };
 
+  // ✅ Open in collaborative editor
   const handleOpenEditor = async () => {
     if (!result) return;
 
@@ -151,16 +154,14 @@ export default function ContentGeneratorPage() {
 
       if (error) {
         console.error("Error creating draft:", error);
-        showNotification(
-          `Failed to create draft: ${error.message || "Unknown error"}`,
-          "error"
-        );
+        showNotification("Failed to create draft.", "error");
         return;
       }
 
       router.push(`/dashboard/teacher/editor/${data.id}`);
     } catch (err) {
-      console.error("Open editor error:", err);
+      console.error("❌ Open editor error:", err);
+      showNotification("Error opening editor. Please try again.", "error");
     }
   };
 
@@ -190,12 +191,11 @@ export default function ContentGeneratorPage() {
                   ? "-- No templates available --"
                   : "-- No Template --"}
               </option>
-              {templates.length > 0 &&
-                templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.title}
-                  </option>
-                ))}
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.title}
+                </option>
+              ))}
             </select>
             <button
               onClick={() => router.push("/dashboard/teacher/templates")}
@@ -219,8 +219,7 @@ export default function ContentGeneratorPage() {
           </div>
           {templates.length === 0 && (
             <p className="text-sm text-gray-500 mt-1">
-              You haven't created any templates yet. Click the + button to
-              create your first template.
+              You haven’t created any templates yet. Click + to add one.
             </p>
           )}
         </div>
@@ -254,14 +253,13 @@ export default function ContentGeneratorPage() {
                     value={draftTitle}
                     onChange={(e) => setDraftTitle(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        setIsEditingTitle(false);
-                      } else if (e.key === "Escape") {
+                      if (e.key === "Enter") setIsEditingTitle(false);
+                      else if (e.key === "Escape") {
                         setDraftTitle("Untitled");
                         setIsEditingTitle(false);
                       }
                     }}
-                    className="text-xl font-semibold text-gray-800 bg-transparent border-b-2 border-blue-500 outline-none px-1 py-1 min-w-0 flex-1"
+                    className="text-xl font-semibold text-gray-800 bg-transparent border-b-2 border-blue-500 outline-none px-1 py-1 flex-1"
                     placeholder="Enter title..."
                     autoFocus
                   />
@@ -285,7 +283,6 @@ export default function ContentGeneratorPage() {
                 <h2
                   className="text-xl font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
                   onClick={() => setIsEditingTitle(true)}
-                  title="Click to edit title"
                 >
                   {draftTitle}
                 </h2>
