@@ -287,10 +287,19 @@ export default function CollaborativeEditor({
   const [connectionStatus, setConnectionStatus] = useState<string>("connecting");
   const initContentRef = useRef<string | undefined>(undefined);
 
-  // Initialize provider first
+  // Initialize provider with room readiness check
   useEffect(() => {
     if (room && ydoc && !provider) {
-      console.log("🔗 Initializing Liveblocks provider for room:", roomId);
+      // Check if room is properly initialized (has required methods)
+      const hasRequiredMethods = typeof (room as any).getSelf === 'function' && 
+                                typeof (room as any).getOthers === 'function';
+      
+      if (!hasRequiredMethods) {
+        console.log("⏳ Room methods not available yet, will retry when room updates...");
+        return;
+      }
+    
+    console.log("🔗 Initializing Liveblocks provider for room:", roomId);
       console.log("🏠 Room object:", room);
       console.log("🏠 Room ID matches:", room.id === roomId);
       console.log("🏠 Room connection state:", (room as any).getConnectionState?.());
@@ -315,11 +324,46 @@ export default function CollaborativeEditor({
           return;
         }
 
-        // Check if room has required methods
+        // Check if room has required methods - if missing, wait longer
         const roomMethods = ['getConnectionState', 'getSelf', 'getOthers'];
         const missingMethods = roomMethods.filter(method => typeof (room as any)[method] !== 'function');
         if (missingMethods.length > 0) {
-          console.warn("⚠️ Room missing methods:", missingMethods);
+          console.warn("⚠️ Room missing methods:", missingMethods, "- waiting for room to initialize...");
+          // Retry after 500ms if room methods are still missing
+          setTimeout(() => {
+            console.log("🔄 Retrying room initialization...");
+            const retryMethods = roomMethods.filter(method => typeof (room as any)[method] !== 'function');
+            if (retryMethods.length === 0) {
+              console.log("✅ Room methods now available, proceeding...");
+              initProvider();
+            } else {
+              console.error("❌ Room still missing methods after retry:", retryMethods);
+              console.log("🔍 Room prototype:", Object.getPrototypeOf(room));
+              console.log("🔍 Room properties:", Object.keys(room));
+            }
+          }, 500);
+          return;
+        }
+
+        // Final validation before creating provider - check if room has required methods
+        const requiredMethods = ['getSelf', 'getOthers'];
+        const hasRequiredMethods = requiredMethods.every(method => typeof (room as any)[method] === 'function');
+        
+        if (!hasRequiredMethods || room.constructor.name === 'Object') {
+          console.error("❌ Room is not properly initialized - missing required methods or is plain Object");
+          console.log("🔍 Room constructor:", room.constructor.name);
+          console.log("🔍 Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(room)));
+          
+          // Wait a bit longer and try again
+          setTimeout(() => {
+            if (room && typeof (room as any).getSelf === 'function') {
+              console.log("🔄 Room methods now available, retrying provider creation...");
+              initProvider();
+            } else {
+              console.error("❌ Room still not ready after retry");
+            }
+          }, 1000);
+          return;
         }
 
         let yProvider: LiveblocksYjsProvider;
