@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from supabase_vector import upsert_text_chunks
-from llm import embed_texts
+from .supabase_vector import upsert_text_chunks
+from .llm import embed_texts
 from typing import Dict, Any
 
 load_dotenv()
