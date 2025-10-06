@@ -12,7 +12,6 @@ import CharacterCount from "@tiptap/extension-character-count";
 import { useRoom } from "@liveblocks/react";
 import { useEffect, useState, useRef } from "react";
 import { LiveblocksYjsProvider } from "@liveblocks/yjs";
-// Use Yjs from the same source as LiveblocksYjsProvider
 import * as Y from "yjs";
 import TurndownService from "turndown";
 import { marked } from "marked";
@@ -246,83 +245,45 @@ export default function CollaborativeEditor({
   });
   
   const room = useRoom();
-  const [ydoc] = useState(() => {
-    const doc = new Y.Doc();
-    console.log("📄 Created new Yjs document for room:", roomId);
-    return doc;
-  });
+  const [ydoc] = useState(() => new Y.Doc());
   const [provider, setProvider] = useState<LiveblocksYjsProvider | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>("connecting");
-  const [debugInfo, setDebugInfo] = useState<any>({});
   const initContentRef = useRef<string | undefined>(undefined);
 
-  // Initialize provider first
+  // Initialize provider
   useEffect(() => {
     if (room && ydoc && !provider) {
-      console.log("🔗 Initializing Liveblocks provider for room:", roomId);
-      console.log("🏠 Room object:", room);
-      console.log("🏠 Room ID matches:", room.id === roomId);
+      console.log("🔗 Creating Liveblocks provider for room:", roomId);
       
-      let yProvider: LiveblocksYjsProvider;
       try {
-        yProvider = new LiveblocksYjsProvider(room, ydoc);
-        console.log("🔗 Provider created successfully");
+        const yProvider = new LiveblocksYjsProvider(room, ydoc);
+        console.log("✅ Provider created successfully");
+        
+        yProvider.on('status', ({ status }: { status: string }) => {
+          console.log("📡 Provider status:", status);
+          setConnectionStatus(status);
+        });
+        
+        yProvider.on('sync', (synced: boolean) => {
+          console.log("🔄 Provider synced:", synced);
+          if (synced) {
+            setConnectionStatus("connected");
+          }
+        });
+        
+        setProvider(yProvider);
+        
+        return () => {
+          console.log("🔌 Destroying provider");
+          yProvider.destroy();
+        };
       } catch (error) {
         console.error("❌ Failed to create provider:", error);
-        return;
+        setConnectionStatus("error");
       }
-      
-      yProvider.on('status', ({ status }: { status: string }) => {
-        console.log("📡 Provider status changed:", status);
-        setConnectionStatus(status);
-        
-        if (status === 'connected') {
-          console.log("✅ Successfully connected to Liveblocks room:", roomId);
-        }
-      });
-      
-      yProvider.on('sync', (synced: boolean) => {
-        console.log("🔄 Provider sync event:", synced, "- User:", localUser?.name);
-        if (synced) {
-          setConnectionStatus("connected");
-          const fragment = ydoc.getXmlFragment('default');
-          console.log("📄 Document fragment after sync - length:", fragment.length);
-          console.log("👥 Connected users:", yProvider.awareness?.getStates().size || 0);
-          
-          setDebugInfo((prev: any) => ({
-            ...prev,
-            synced: true,
-            fragmentLength: fragment.length,
-            connectedUsers: yProvider.awareness?.getStates().size || 0,
-            lastSyncTime: new Date().toISOString()
-          }));
-        }
-      });
-
-      yProvider.on('awareness-change', () => {
-        const states = yProvider.awareness?.getStates() || new Map();
-        console.log("👀 Awareness changed - connected users:", states.size);
-      });
-      
-      setProvider(yProvider);
-      setConnectionStatus("connecting");
-      
-      // Test Yjs document changes
-      ydoc.on('update', (update: Uint8Array, origin: any) => {
-        console.log("📄 Yjs document updated:", {
-          updateSize: update.length,
-          origin: origin?.constructor?.name || origin,
-          user: localUser?.name || "unknown"
-        });
-      });
-
-      return () => {
-        console.log("🔌 Destroying provider for room:", roomId);
-        yProvider.destroy();
-      };
     }
-  }, [room, ydoc, provider, roomId, localUser?.name]);
+  }, [room, ydoc, provider, roomId]);
 
   const editor = useEditor(
     {
@@ -330,30 +291,17 @@ export default function CollaborativeEditor({
         StarterKit.configure({ 
           history: false, // Disable history since we're using collaboration
         }),
-        Collaboration.configure({ 
-          document: ydoc, 
-          field: "default",
+        Collaboration.configure({
+          document: ydoc,
+          field: 'default',
         }),
         ...(provider && localUser
           ? [
               CollaborationCursor.configure({
                 provider: provider,
-                user: { 
-                  name: localUser.name, 
+                user: {
+                  name: localUser.name,
                   color: localUser.color,
-                },
-                render: user => {
-                  const cursor = document.createElement('span');
-                  cursor.classList.add('collaboration-cursor__caret');
-                  cursor.setAttribute('style', `border-color: ${user.color}`);
-                  
-                  const label = document.createElement('div');
-                  label.classList.add('collaboration-cursor__label');
-                  label.setAttribute('style', `background-color: ${user.color}`);
-                  label.insertBefore(document.createTextNode(user.name), null);
-                  cursor.insertBefore(label, null);
-                  
-                  return cursor;
                 },
               }),
             ]
@@ -363,7 +311,7 @@ export default function CollaborativeEditor({
         Typography,
         UnderlineExtension,
         CharacterCount.configure({
-          limit: 10000, // Optional: set a character limit
+          limit: 10000,
         }),
       ],
       editorProps: {
@@ -384,91 +332,58 @@ export default function CollaborativeEditor({
           isRemote,
           user: localUser?.name || "unknown"
         });
-        
-        // Log document state
-        const fragment = ydoc.getXmlFragment('default');
-        console.log("� Yjs document state:", {
-          fragmentLength: fragment.length,
-          fragmentContent: fragment.toString().substring(0, 100) + "...",
-        });
 
-        // Test if document updates are working
         if (!isRemote) {
-          console.log("📤 Local change detected, should sync to other users");
+          console.log("📤 Local change detected");
         } else {
-          console.log("� Remote change received from another user");
+          console.log("📥 Remote change received");
         }
       },
     },
-    [ydoc, provider, localUser?.id, roomId] // Add roomId to dependencies
+    [ydoc, provider, localUser?.id, roomId]
   );
 
+  // Set initial content when editor and provider are ready
   useEffect(() => {
-    if (editor && provider && ydoc && initialContent && initialContent.trim() !== "") {
-      console.log("⏱️ Setting up initial content sync...");
-      
-      // Use room-specific key to track initialization
+    if (editor && provider && initialContent && initialContent.trim() !== "") {
       const contentKey = roomId;
       
-      // Only initialize if we haven't already done so for this room
       if (initContentRef.current === contentKey) {
-        console.log("📄 Content already initialized for this room");
+        console.log("📄 Content already initialized for room:", roomId);
         return;
       }
       
       const handleSync = () => {
-        // Check if already initialized for this room
-        if (initContentRef.current === contentKey) {
-          return;
-        }
-
+        if (initContentRef.current === contentKey) return;
+        
         const fragment = ydoc.getXmlFragment("default");
-        console.log("📄 Document sync - fragment length:", fragment.length, "for room:", roomId);
+        const editorContent = editor.getHTML().replace(/<\/?[^>]+(>|$)/g, "").trim();
         
-        // Check if document is truly empty (no content or just whitespace)
-        const currentContent = fragment.toString().trim();
-        const editorContent = editor.getHTML().replace(/<\/?[^>]+(>|$)/g, "").trim(); // Strip HTML tags
-        
-        if (fragment.length === 0 || currentContent === "" || editorContent === "") {
-          console.log("📝 Setting initial content for empty document");
-          
-          // Mark this room as initialized
+        if (fragment.length === 0 || editorContent === "") {
+          console.log("📝 Setting initial content");
           initContentRef.current = contentKey;
           
-          // Convert markdown to HTML and set content
           try {
             const htmlContent = marked(initialContent);
-            editor.commands.setContent(htmlContent, false); // false = don't add to history
-            console.log("✅ Initial content set for room:", roomId);
+            editor.commands.setContent(htmlContent, false);
+            console.log("✅ Initial content set");
           } catch (error) {
             console.error("❌ Error setting initial content:", error);
           }
         } else {
-          console.log("📄 Document already has content, skipping initial content");
-          // Mark as initialized even if we don't set content
+          console.log("📄 Document already has content");
           initContentRef.current = contentKey;
         }
       };
 
-      // Listen for sync events
       provider.on('sync', handleSync);
       
-      // Check immediately if provider is already synced
       if (provider.synced) {
-        console.log("🔄 Provider already synced, running handleSync immediately");
         handleSync();
       }
-      
-      // Also try after a short delay to ensure everything is ready
-      const timeoutId = setTimeout(() => {
-        if (initContentRef.current !== contentKey) {
-          handleSync();
-        }
-      }, 500);
 
       return () => {
         provider.off('sync', handleSync);
-        clearTimeout(timeoutId);
       };
     }
   }, [editor, provider, ydoc, roomId, initialContent]);
@@ -666,10 +581,8 @@ export default function CollaborativeEditor({
               <div>Connection Status: {connectionStatus}</div>
               <div>Has Initial Content: {!!initialContent}</div>
               <div>Initial Content Length: {initialContent?.length || 0}</div>
-              <div>Synced: {debugInfo.synced ? '✅' : '❌'}</div>
-              <div>Fragment Length: {debugInfo.fragmentLength || 0}</div>
-              <div>Connected Users: {debugInfo.connectedUsers || 0}</div>
-              <div>Last Sync: {debugInfo.lastSyncTime || 'never'}</div>
+              <div>Provider Synced: {provider?.synced ? '✅' : '❌'}</div>
+              <div>Fragment Length: {ydoc ? ydoc.getXmlFragment('default').length : 0}</div>
               <div>Init Content Ref: {initContentRef.current || 'none'}</div>
             </div>
           </details>
