@@ -1,6 +1,6 @@
 import os 
 import re
-import signal
+import threading
 from typing import List, Optional
 from dotenv import load_dotenv
 from markdownify import markdownify as md
@@ -124,8 +124,26 @@ def fallback_generate_with_supabase(prompt: str):
 class TimeoutException(Exception):
     pass
 
-def handler(signum, frame):
-    raise TimeoutException("⏱ Gemini generation took too long (timeout).")
+class TimeoutHandler:
+    def __init__(self, timeout_seconds):
+        self.timeout_seconds = timeout_seconds
+        self.timer = None
+        self.timed_out = False
+    
+    def _timeout_callback(self):
+        self.timed_out = True
+    
+    def start(self):
+        self.timer = threading.Timer(self.timeout_seconds, self._timeout_callback)
+        self.timer.start()
+    
+    def stop(self):
+        if self.timer:
+            self.timer.cancel()
+    
+    def check_timeout(self):
+        if self.timed_out:
+            raise TimeoutException("⏱ Gemini generation took too long (timeout).")
 
 # ---------- Main Generator (RAG + Gemini) ----------
 def generate_with_rag(
@@ -208,8 +226,8 @@ Then continue by filling the provided template or generating structured content.
     full_prompt = f"{system_prompt}\n\nContext:\n{context}\n\nUser request:\n{prompt}"
 
     # --- Timeout Wrapper for Gemini ---
-    signal.signal(signal.SIGALRM, handler)
-    signal.alarm(40)  # ⏱ Limit Gemini to 40 seconds
+    timeout_handler = TimeoutHandler(40)  # ⏱ Limit Gemini to 40 seconds
+    timeout_handler.start()
 
     try:
         response = gemini_model.generate_content(
@@ -222,7 +240,8 @@ Then continue by filling the provided template or generating structured content.
             },
         )
 
-        signal.alarm(0)  # clear timeout
+        timeout_handler.stop()  # clear timeout
+        timeout_handler.check_timeout()  # check if we timed out during generation
 
         text_out = getattr(response, "text", None)
         if not text_out and hasattr(response, "candidates"):
@@ -245,4 +264,4 @@ Then continue by filling the provided template or generating structured content.
         return f"Error generating content: {str(e)}"
 
     finally:
-        signal.alarm(0)  # make sure alarm is cleared
+        timeout_handler.stop()  # make sure timer is stopped
