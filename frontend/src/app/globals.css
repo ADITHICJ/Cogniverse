@@ -131,3 +131,63 @@ img {
 .safe-area-right {
   padding-right: env(safe-area-inset-right);
 }
+
+/* Enhanced mobile dark mode support */
+@media (max-width: 768px) {
+  @media (prefers-color-scheme: dark) {
+    /* Ensure text is always visible on mobile dark mode */
+    input, textarea, select {
+      background-color: rgb(55 65 81) !important; /* gray-700 */
+      color: rgb(243 244 246) !important; /* gray-100 */
+      border-color: rgb(107 114 128) !important; /* gray-500 */
+    }
+    
+    input::placeholder, textarea::placeholder {
+      color: rgb(156 163 175) !important; /* gray-400 */
+    }
+    
+    /* Button text contrast */
+    button:not([class*="bg-"]) {
+      background-color: rgb(55 65 81);
+      color: rgb(243 244 246);
+      border-color: rgb(107 114 128);
+    }
+    
+    /* Ensure all text is readable */
+    p, span, div, h1, h2, h3, h4, h5, h6, label {
+      color: rgb(243 244 246) !important;
+    }
+    
+    /* Exception for elements that should stay white text */
+    [class*="text-white"], button[class*="bg-"], a[class*="bg-"] {
+      color: white !important;
+    }
+    
+    /* Links that should be visible */
+    a:not([class*="bg-"]) {
+      color: rgb(129 140 248) !important; /* indigo-400 */
+    }
+  }
+}
+
+/* Dark mode scroll bars */
+@media (prefers-color-scheme: dark) {
+  /* Webkit scrollbar styling for dark mode */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: rgb(31 41 55); /* gray-800 */
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgb(75 85 99); /* gray-600 */
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(107 114 128); /* gray-500 */
+  }
+}

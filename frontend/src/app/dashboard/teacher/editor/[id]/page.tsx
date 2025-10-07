@@ -158,10 +158,10 @@ export default function EditorPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-          <p className="text-lg font-semibold text-gray-700">Loading draft...</p>
+          <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto"></div>
+          <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">Loading draft...</p>
         </div>
       </div>
     );
@@ -169,15 +169,15 @@ export default function EditorPage() {
 
   if (!draft) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center max-w-md border dark:border-gray-700">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Draft not found</h2>
-          <p className="text-gray-600">The document you're looking for doesn't exist.</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Draft not found</h2>
+          <p className="text-gray-600 dark:text-gray-300">The document you're looking for doesn't exist.</p>
         </div>
       </div>
     );
@@ -186,13 +186,13 @@ export default function EditorPage() {
   const roomId = `draft-${draft.id}`;
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <NotificationToast />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
   <div className="px-3 sm:px-6 py-4">
     {/* Title */}
     <div>
@@ -204,7 +204,7 @@ export default function EditorPage() {
               value={titleValue}
               onChange={(e) => setTitleValue(e.target.value)}
               onKeyDown={handleTitleKeyPress}
-              className="text-2xl font-bold bg-transparent border-b-2 border-blue-500 outline-none px-2 py-1 min-w-0 flex-1 text-gray-900"
+              className="text-2xl font-bold bg-transparent border-b-2 border-blue-500 dark:border-blue-400 outline-none px-2 py-1 min-w-0 flex-1 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               placeholder="Enter title..."
               autoFocus
             />
@@ -219,7 +219,7 @@ export default function EditorPage() {
             </button>
             <button
               onClick={handleTitleCancel}
-              className="p-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-200"
+              className="p-2 bg-gray-500 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-600 dark:hover:bg-gray-700 transition-all duration-200"
               title="Cancel"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,11 +232,11 @@ export default function EditorPage() {
             className="flex items-center gap-2 group cursor-pointer"
             onClick={handleTitleEdit}
           >
-            <h1 className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               {draft?.title || "Untitled"}
             </h1>
             <svg
-              className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="w-5 h-5 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -253,7 +253,7 @@ export default function EditorPage() {
       </div>
 
       {/* Status information below title */}
-      <div className="text-xs text-gray-600 mt-2 flex items-center gap-4">
+      <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-4">
         <span className="flex items-center gap-1">
           <span className={`inline-block w-2 h-2 rounded-full ${
             currentUserId ? "bg-green-500" : "bg-red-500"
@@ -427,7 +427,7 @@ export default function EditorPage() {
 
       {/* Right Sidebar - Version History */}
       {/* Desktop: Always visible */}
-      <div className="hidden lg:block w-80 border-l border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+      <div className="hidden lg:block w-80 border-l border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 overflow-auto">
         <HistorySidebar draftId={draft.id} />
       </div>
 
@@ -440,15 +440,15 @@ export default function EditorPage() {
             onClick={() => setIsVersionHistoryOpen(false)}
           />
           {/* Sidebar */}
-          <div className="w-80 max-w-[85vw] bg-white border-l border-gray-200 shadow-2xl flex flex-col">
+          <div className="w-80 max-w-[85vw] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col">
             {/* Close button */}
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-              <h3 className="font-semibold text-gray-900">Version History</h3>
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Version History</h3>
               <button
                 onClick={() => setIsVersionHistoryOpen(false)}
-                className="p-2 rounded-lg hover:bg-gray-200 transition-colors touch-manipulation"
+                className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors touch-manipulation"
               >
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>

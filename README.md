@@ -48,45 +48,6 @@ PrepSmart is an innovative educational platform that empowers teachers to create
 - **User Templates**: Custom user-created templates
 - **Drafts**: Work-in-progress content with versioning
 - **Vector Tables**: Embeddings for smart content retrieval
-- **Notifications**: In-app notification system
-
-## � Mobile Optimization
-
-PrepSmart is fully optimized for all device types with comprehensive mobile-first design:
-
-### 🎯 Device Compatibility
-- **Mobile**: 320px - 768px (phones, small tablets)
-- **Tablet**: 768px - 1024px (iPads, Android tablets)  
-- **Desktop**: 1024px+ (laptops, desktops)
-- **PWA Support**: Install as native app on mobile devices
-
-### ⚡ Performance Features
-- **Code Splitting**: Lazy loading for optimal performance
-- **Service Worker**: Offline functionality and caching
-- **Image Optimization**: Next.js Image component with responsive sizing
-- **Bundle Optimization**: Tree shaking and dynamic imports
-
-### 👆 Touch Optimizations
-- **Touch-Friendly Controls**: 44px minimum touch targets
-- **Gesture Support**: Swipe, pinch, and tap interactions
-- **Mobile Navigation**: Hamburger menu and collapsible sidebars
-- **Safe Area Support**: iPhone X+ notch and home indicator handling
-
-### 🎨 UI/UX Enhancements
-- **Responsive Typography**: Fluid scaling across devices
-- **Mobile-First CSS**: Tailwind CSS with custom mobile utilities
-- **Dark Mode**: Automatic system preference detection
-- **Reduced Motion**: Accessibility-compliant animations
-
-### 📊 Testing Mobile Optimizations
-Open `mobile-optimization-test.html` in any browser to run comprehensive mobile tests:
-```bash
-# Open test suite
-open mobile-optimization-test.html
-# or serve locally
-python -m http.server 8000
-# then visit http://localhost:8000/mobile-optimization-test.html
-```
 
 ## �🚀 Getting Started
 
@@ -143,16 +104,14 @@ Run the SQL files in the `backend/` directory to set up your database tables:
 -- Run these in your PostgreSQL/Supabase SQL editor
 -- 1. create_draft_submissions_table.sql
 -- 2. create_draft_versions_table.sql
--- 3. create_notifications_table.sql
--- 4. create_profile_trigger.sql
--- 5. fix_profiles_table.sql
--- 6. setup_profile_storage.sql
+-- 3. create_profile.sql
+-- 4. create_profiles_table.sql
+-- 5. profile_picture_storage.sql
 ```
 
 #### 4. Initialize Vector Database
 ```bash
 cd backend
-python scripts/test_pg_connection.py  # Test database connection
 python scripts/ingest_textbooks.py   # Process and embed PDF textbooks
 python scripts/ingest_templates.py   # Process template data
 ```
@@ -250,17 +209,23 @@ Streamlined review process:
 ## 🚀 Deployment
 
 ### Backend (Render)
-The backend is configured for deployment on Render using `render.yaml`:
+## Project Environment & Setup
 
-```yaml
-services:
-  - type: web
-    name: prepsmart-backend
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn src.main:app --host 0.0.0.0 --port 10000
+- **Language & Version:** Python 3.11
+- **Branch:** `main`
+- **Region:** Asia (for better Supabase latency)
+
+### Build Command
+
+```bash
+pip install -r requirements.txt
 ```
 
+### Start Command
+
+```bash
+uvicorn src.main:app --host 0.0.0.0 --port 10000
+```
 ### Frontend (Vercel)
 Deploy the frontend to Vercel:
 
@@ -284,18 +249,6 @@ npm run build
 - Write meaningful commit messages
 - Test your changes thoroughly
 - Update documentation as needed
-
-## 📧 API Endpoints
-
-### Backend API (`/api`)
-- `POST /generate` - Generate AI content
-- `GET/POST /drafts` - Manage drafts
-- `POST /embed-user-template` - Update template embeddings
-- `GET /` - Health check
-
-### Frontend API Routes (`/api`)
-- `/api/embed-user-template` - Template embedding refresh
-- `/api/liveblocks-auth` - Liveblocks authentication
 
 ## 🔧 Configuration
 
@@ -326,42 +279,6 @@ npm run build
 - User authentication
 - PDF processing
 - Vector search
-
-### In Progress 🚧
-- Enhanced approval workflows
-- Mobile app development
-- Advanced analytics
-- Integration APIs
-
-### Planned 📋
-- Offline mode
-- Multi-language support
-- Advanced AI features
-- Export capabilities
-- Integration with LMS platforms
-
-## 🐛 Known Issues
-
-1. **Template Embedding Refresh**: Ensure backend is running on correct port (8000)
-2. **Collaborative Editor**: Content might not appear if Liveblocks connection fails
-3. **PDF Processing**: Large PDFs may take time to process
-
-## 🛠️ Troubleshooting
-
-### Backend Not Starting
-- Check if port 8000 is available: `netstat -an | findstr :8000`
-- Verify environment variables are set correctly
-- Ensure all Python dependencies are installed
-
-### Frontend Build Issues
-- Clear node_modules and reinstall: `rm -rf node_modules && npm install`
-- Check Next.js version compatibility
-- Verify all environment variables are set
-
-### Database Connection Issues
-- Test connection with `python scripts/test_pg_connection.py`
-- Verify Supabase URL and keys
-- Check if pgvector extension is enabled
 
 ## 📄 License
 

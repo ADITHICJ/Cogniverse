@@ -1047,14 +1047,23 @@ export default function CollaborativeEditor({
           <EditorContent 
             editor={editor} 
             className="prose prose-sm sm:prose lg:prose-lg max-w-none 
-                      dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-gray-100
+                      dark:prose-invert 
+                      prose-headings:text-gray-900 dark:prose-headings:text-gray-100
                       prose-p:text-gray-800 dark:prose-p:text-gray-200
                       prose-strong:text-gray-900 dark:prose-strong:text-gray-100
                       prose-em:text-gray-700 dark:prose-em:text-gray-300
                       prose-blockquote:text-gray-700 dark:prose-blockquote:text-gray-300
+                      prose-blockquote:border-gray-300 dark:prose-blockquote:border-gray-600
                       prose-code:text-gray-900 dark:prose-code:text-gray-100
+                      prose-code:bg-gray-100 dark:prose-code:bg-gray-700
                       prose-pre:bg-gray-100 dark:prose-pre:bg-gray-700
+                      prose-pre:text-gray-800 dark:prose-pre:text-gray-200
+                      prose-li:text-gray-800 dark:prose-li:text-gray-200
+                      prose-ul:text-gray-800 dark:prose-ul:text-gray-200
+                      prose-ol:text-gray-800 dark:prose-ol:text-gray-200
+                      prose-a:text-indigo-600 dark:prose-a:text-indigo-400
                       p-4 sm:p-6 focus:outline-none
+                      text-gray-900 dark:text-gray-100
                       touch-manipulation selection:bg-blue-100 dark:selection:bg-blue-900/50"
           />
         </div>
