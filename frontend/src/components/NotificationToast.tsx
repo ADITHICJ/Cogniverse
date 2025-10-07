@@ -45,43 +45,43 @@ export default function NotificationToast() {
   const getIcon = (type: string) => {
     switch (type) {
       case "success":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" />;
       case "error":
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
+        return <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400" />;
       case "info":
       default:
-        return <Info className="h-5 w-5 text-blue-500" />;
+        return <Info className="h-5 w-5 text-blue-500 dark:text-blue-400" />;
     }
   };
 
   const getBackgroundColor = (type: string) => {
     switch (type) {
       case "success":
-        return "bg-green-50 border-green-200";
+        return "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800";
       case "error":
-        return "bg-red-50 border-red-200";
+        return "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
       case "info":
       default:
-        return "bg-blue-50 border-blue-200";
+        return "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
     }
   };
 
   if (notifications.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-[calc(100vw-2rem)] sm:max-w-sm">
       {notifications.map(notification => (
         <div
           key={notification.id}
-          className={`flex items-center gap-3 p-4 rounded-lg border shadow-lg max-w-sm animate-in slide-in-from-right-full duration-300 ${getBackgroundColor(notification.type)}`}
+          className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border shadow-lg w-full animate-in slide-in-from-right-full duration-300 ${getBackgroundColor(notification.type)}`}
         >
           {getIcon(notification.type)}
-          <span className="flex-1 text-sm font-medium text-gray-800">
+          <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">
             {notification.message}
           </span>
           <button
             onClick={() => removeNotification(notification.id)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
