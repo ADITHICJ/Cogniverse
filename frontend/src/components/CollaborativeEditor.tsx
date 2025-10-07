@@ -591,7 +591,7 @@ export default function CollaborativeEditor({
       editorProps: {
         attributes: {
           class:
-            "prose prose-lg max-w-none focus:outline-none min-h-[500px] p-6 leading-relaxed",
+            "prose prose-lg max-w-none focus:outline-none min-h-[500px] p-6 leading-relaxed dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:text-gray-700 dark:prose-em:text-gray-300 prose-blockquote:text-gray-700 dark:prose-blockquote:text-gray-300 prose-code:text-gray-900 dark:prose-code:text-gray-100 prose-li:text-gray-800 dark:prose-li:text-gray-200 prose-ul:text-gray-800 dark:prose-ul:text-gray-200 prose-ol:text-gray-800 dark:prose-ol:text-gray-200 prose-a:text-indigo-600 dark:prose-a:text-indigo-400 text-gray-900 dark:text-gray-100",
           style: 'font-family: "Inter", sans-serif;',
         },
       },

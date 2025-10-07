@@ -167,6 +167,49 @@ img {
     a:not([class*="bg-"]) {
       color: rgb(129 140 248) !important; /* indigo-400 */
     }
+    
+    /* Specific editor content text visibility */
+    .ProseMirror {
+      color: rgb(243 244 246) !important;
+    }
+    
+    .ProseMirror p {
+      color: rgb(243 244 246) !important;
+    }
+    
+    .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
+      color: rgb(243 244 246) !important;
+    }
+    
+    .ProseMirror strong {
+      color: rgb(243 244 246) !important;
+    }
+    
+    .ProseMirror em {
+      color: rgb(209 213 219) !important; /* gray-300 */
+    }
+    
+    .ProseMirror li {
+      color: rgb(243 244 246) !important;
+    }
+    
+    .ProseMirror ul, .ProseMirror ol {
+      color: rgb(243 244 246) !important;
+    }
+    
+    .ProseMirror blockquote {
+      color: rgb(209 213 219) !important; /* gray-300 */
+      border-left-color: rgb(107 114 128) !important; /* gray-500 */
+    }
+    
+    .ProseMirror code {
+      color: rgb(243 244 246) !important;
+      background-color: rgb(55 65 81) !important; /* gray-700 */
+    }
+    
+    .ProseMirror a {
+      color: rgb(129 140 248) !important; /* indigo-400 */
+    }
   }
 }
 
