@@ -166,25 +166,25 @@ export default function ContentGeneratorPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <NotificationToast />
       <TopBar />
 
       <main className="flex-1 p-8 max-w-3xl mx-auto w-full">
-        <h1 className="text-3xl font-bold text-blue-600 mb-6">
+        <h1 className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-6">
           AI Content Generator
         </h1>
 
         {/* Template Dropdown */}
         <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">
+          <label className="block text-gray-700 dark:text-gray-200 font-medium mb-2">
             Apply Template (optional)
           </label>
           <div className="flex gap-2">
             <select
               value={selectedTemplate}
               onChange={(e) => setSelectedTemplate(e.target.value)}
-              className="flex-1 border rounded-lg p-3"
+              className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg p-3"
             >
               <option value="">
                 {templates.length === 0
@@ -226,7 +226,7 @@ export default function ContentGeneratorPage() {
 
         {/* Prompt Input */}
         <textarea
-          className="w-full border rounded-lg p-3 mb-4"
+          className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg p-3 mb-4 placeholder-gray-500 dark:placeholder-gray-400"
           rows={5}
           placeholder="Enter your prompt (e.g., Generate a 45-minute lesson plan on World War I)..."
           value={prompt}
@@ -236,14 +236,14 @@ export default function ContentGeneratorPage() {
         <button
           onClick={handleGenerate}
           disabled={loading}
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
+          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
         >
           {loading ? "Generating..." : "Generate Content"}
         </button>
 
         {/* Generated Result */}
         {result && (
-          <div className="mt-8 border rounded-lg p-6 bg-gray-50 shadow-sm">
+          <div className="mt-8 border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-gray-50 dark:bg-gray-800 shadow-sm">
             {/* Draft title editing */}
             <div className="mb-4">
               {isEditingTitle ? (
@@ -259,7 +259,7 @@ export default function ContentGeneratorPage() {
                         setIsEditingTitle(false);
                       }
                     }}
-                    className="text-xl font-semibold text-gray-800 bg-transparent border-b-2 border-blue-500 outline-none px-1 py-1 flex-1"
+                    className="text-xl font-semibold text-gray-800 dark:text-gray-100 bg-transparent border-b-2 border-blue-500 outline-none px-1 py-1 flex-1"
                     placeholder="Enter title..."
                     autoFocus
                   />
@@ -281,7 +281,7 @@ export default function ContentGeneratorPage() {
                 </div>
               ) : (
                 <h2
-                  className="text-xl font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+                  className="text-xl font-semibold text-gray-800 dark:text-gray-100 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                   onClick={() => setIsEditingTitle(true)}
                 >
                   {draftTitle}
@@ -289,7 +289,7 @@ export default function ContentGeneratorPage() {
               )}
             </div>
 
-            <div className="prose prose-indigo max-w-none">
+            <div className="prose prose-indigo dark:prose-invert max-w-none prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:text-gray-700 dark:prose-em:text-gray-300 prose-blockquote:text-gray-700 dark:prose-blockquote:text-gray-300 prose-code:text-gray-900 dark:prose-code:text-gray-100 prose-li:text-gray-800 dark:prose-li:text-gray-200 prose-ul:text-gray-800 dark:prose-ul:text-gray-200 prose-ol:text-gray-800 dark:prose-ol:text-gray-200 prose-a:text-indigo-600 dark:prose-a:text-indigo-400">
               <ReactMarkdown>{result}</ReactMarkdown>
             </div>
 
@@ -297,13 +297,13 @@ export default function ContentGeneratorPage() {
             <div className="flex flex-wrap gap-2 mt-6">
               <button
                 onClick={handleOpenEditor}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 Open in Collaborative Editor
               </button>
               <button
                 onClick={handleSaveDraft}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
               >
                 Save Draft
               </button>
