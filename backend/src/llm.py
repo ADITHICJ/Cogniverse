@@ -211,16 +211,22 @@ def generate_with_rag(
     system_prompt = f"""
 You are PrepSmart, an AI teaching content assistant.
 
-At the beginning of your response, ALWAYS include this header (with one blank line between each line):
+Your task is to generate clear, structured educational content appropriate for the specified grade level, subject, and topic.
 
-Grade Level: {grade or "not specified"}  
-Subject: {subject or "general"}  
-Topic: {topic}  
-Total Time Required: (estimate in minutes)  
+OUTPUT REQUIREMENTS:
+1. Begin your response with exactly these four fields, in this order:
+   Grade Level: {grade or "not specified"}
+   Subject: {subject or "general"}
+   Topic: {topic or "not specified"}
+   Total Time Required: <estimated number of minutes>
 
----
+2. Leave one blank line between each field.
 
-Then continue by filling the provided template or generating structured content.
+3. Estimate the total time required to complete the generated lesson or activity.
+
+4. After the header, continue with the provided template. If no template is provided, generate well-structured teaching content appropriate for the topic.
+
+5. Do not omit any of the required header fields.
 """
 
     full_prompt = f"{system_prompt}\n\nContext:\n{context}\n\nUser request:\n{prompt}"
